@@ -5,7 +5,7 @@ EditorUtils.psm1
 Shared editor launch + wait helpers (git-rebase-like flows).
 
 Editor selection precedence:
-  1) UTILITY_HUB_EDITOR
+    1) TOMATO_EDITOR
   2) VISUAL
   3) EDITOR
   4) notepad.exe (fallback)
@@ -91,7 +91,7 @@ function Resolve-EditorCommand {
     $userSpecifiedSource = $null
     $userSpecifiedCommand = $null
 
-    foreach ($envName in @('UTILITY_HUB_EDITOR', 'VISUAL', 'EDITOR')) {
+    foreach ($envName in @('TOMATO_EDITOR', 'VISUAL', 'EDITOR')) {
         $val = [Environment]::GetEnvironmentVariable($envName)
         if ($val -and $val.Trim()) {
             $userSpecifiedSource = $envName
@@ -156,7 +156,7 @@ function Resolve-EditorCommand {
     if ($userSpecifiedSource) {
         Write-Host "Editor from ${userSpecifiedSource} not found: ${userSpecifiedCommand}" -ForegroundColor DarkYellow
     }
-    throw "No supported editor found. Set UTILITY_HUB_EDITOR/VISUAL/EDITOR to a valid editor command."
+    throw "No supported editor found. Set TOMATO_EDITOR/VISUAL/EDITOR to a valid editor command."
 }
 
 function Invoke-Editor {

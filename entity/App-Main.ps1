@@ -12,7 +12,7 @@ Goals:
 Notes:
   - This script intentionally does NOT implement workflow logic (month close, labels,
     archival, emailing, etc). It only helps you explore and jump into existing tools.
-    - The navigation preview UI is implemented by: automations/utils/Preview-Location.ps1
+    - The navigation preview UI is implemented by: utils/Preview-Location.ps1
 -------------------------------------------------------------------------------
 #>
 
@@ -219,10 +219,10 @@ function Run-Automation {
     )
 
     # Set environment variables for automations
-    $utilityHubRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-    $env:UTILITY_HUB_ROOT = $utilityHubRoot
+    $tomatoRoot = Split-Path $PSScriptRoot -Parent
+    $env:TOMATO_ROOT = $tomatoRoot
     $env:APP_DIR = $PSScriptRoot
-    $env:UTILS_ROOT = Join-Path $utilityHubRoot 'automations\utils'
+    $env:UTILS_ROOT = Join-Path $tomatoRoot 'utils'
 
     Write-Host ''
     Write-Info "Running automation '$Alias'"

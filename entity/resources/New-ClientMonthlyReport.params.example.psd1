@@ -1,7 +1,7 @@
-# UtilityHub: New Client Monthly Report params (example)
+# Tomato: New Client Monthly Report params (example)
 #
 # Save a copy to:
-#   %LOCALAPPDATA%\utility-hub\data\entity\New-ClientMonthlyReport.psd1
+#   %LOCALAPPDATA%\tomato\data\entity\New-ClientMonthlyReport.psd1
 # or just run the curated automation from App-Main and it will create it for you.
 #
 # Commands (rebase-like):

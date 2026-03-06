@@ -9,7 +9,7 @@ Label format matches Label-GDriveFiles.ps1:
   "[LABEL] filename.ext"
 
 This script intentionally reuses the generic GDrive archiver:
-  automations/gdrive/Archive-GDriveFolder.ps1
+    gdrive/Archive-GDriveFolder.ps1
 
 Examples:
     # Default: zip archives uploaded to <Path>/archives
@@ -150,8 +150,8 @@ if ($ExcludeNameRegex) {
 
 # Locate reusable scripts
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..\..')
-$archiveFolderScript = Join-Path $repoRoot 'automations\gdrive\Archive-GDriveFolder.ps1'
-$uploadScript = Join-Path $repoRoot 'automations\gdrive\Upload-ToGDrive.ps1'
+$archiveFolderScript = Join-Path $repoRoot 'gdrive\Archive-GDriveFolder.ps1'
+$uploadScript = Join-Path $repoRoot 'gdrive\Upload-ToGDrive.ps1'
 
 if (-not (Test-Path -LiteralPath $archiveFolderScript -PathType Leaf)) {
     throw "Archive helper script not found: $archiveFolderScript"
@@ -221,7 +221,7 @@ foreach ($g in $groups) {
 $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 
 # Build archives locally, then upload
-$workRoot = Join-Path $env:TEMP ("utility-hub_label-archive_" + [System.Guid]::NewGuid().ToString())
+$workRoot = Join-Path $env:TEMP ("tomato_label-archive_" + [System.Guid]::NewGuid().ToString())
 New-Item -ItemType Directory -Path $workRoot | Out-Null
 
 function Test-ExecutableAvailable {

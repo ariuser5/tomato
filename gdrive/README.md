@@ -16,14 +16,14 @@ Archives files from a Google Drive folder to a local archive.
 
 **Usage:**
 ```powershell
-.\automations\gdrive\Archive-GDriveFolder.ps1 -Path "gdrive:MyFolder/Documents"
-.\automations\gdrive\Archive-GDriveFolder.ps1 -Path "gdrive:Reports" -FilePattern "*.pdf" -OutputPath ".\backup.zip"
+.\gdrive\Archive-GDriveFolder.ps1 -Path "gdrive:MyFolder/Documents"
+.\gdrive\Archive-GDriveFolder.ps1 -Path "gdrive:Reports" -FilePattern "*.pdf" -OutputPath ".\backup.zip"
 
 # 7z (requires 7-Zip)
-.\automations\gdrive\Archive-GDriveFolder.ps1 -Path "gdrive:Reports" -FilePattern "*.pdf" -ArchiveExtension "7z" -OutputPath ".\reports.7z"
+.\gdrive\Archive-GDriveFolder.ps1 -Path "gdrive:Reports" -FilePattern "*.pdf" -ArchiveExtension "7z" -OutputPath ".\reports.7z"
 
 # Files labeled like "[INVOICE] ..." (FileNames treats brackets literally; '*' is a wildcard)
-.\automations\gdrive\Archive-GDriveFolder.ps1 -Path "gdrive:clients/acme/inbox" -FileNames "[INVOICE] *" -OutputPath ".\invoices.zip"
+.\gdrive\Archive-GDriveFolder.ps1 -Path "gdrive:clients/acme/inbox" -FileNames "[INVOICE] *" -OutputPath ".\invoices.zip"
 ```
 
 **Parameters:**
@@ -47,9 +47,9 @@ Uploads a local file to a destination folder on Google Drive.
 
 **Usage:**
 ```powershell
-.\automations\gdrive\Upload-ToGDrive.ps1 -Destination "gdrive:Backups" -LocalFilePath ".\archive.zip"
-.\automations\gdrive\Upload-ToGDrive.ps1 -Destination "gdrive:Backups" -LocalFilePath ".\archive.zip" -Overwrite
-.\automations\gdrive\Upload-ToGDrive.ps1 -Destination "gdrive:Backups" -LocalFilePath ".\archive.zip" -NoCreate
+.\gdrive\Upload-ToGDrive.ps1 -Destination "gdrive:Backups" -LocalFilePath ".\archive.zip"
+.\gdrive\Upload-ToGDrive.ps1 -Destination "gdrive:Backups" -LocalFilePath ".\archive.zip" -Overwrite
+.\gdrive\Upload-ToGDrive.ps1 -Destination "gdrive:Backups" -LocalFilePath ".\archive.zip" -NoCreate
 ```
 
 **Parameters:**

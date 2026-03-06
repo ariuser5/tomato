@@ -2,7 +2,7 @@
 -------------------------------------------------------------------------------
 Send-Email.ps1
 -------------------------------------------------------------------------------
-Sends a quick email using the utility-hub Mailer CLI.
+Sends a quick email using the tomato Mailer CLI.
 
 This script is intended to be called by an orchestrator script.
 For privacy, email parameters are NOT passed as script params; instead they are
@@ -56,8 +56,8 @@ param(
     [string]$UrlType = 'filesystem',
 
     # Optional override to use a different Mailer build.
-    # Default matches installer: %LOCALAPPDATA%\utility-hub\mailer\bin\mailer.exe
-    [string]$MailerExe = (Join-Path (Join-Path $env:LOCALAPPDATA 'utility-hub\mailer') 'bin\mailer.exe'),
+    # Default matches installer: %LOCALAPPDATA%\tomato\mailer\bin\mailer.exe
+    [string]$MailerExe = (Join-Path (Join-Path $env:LOCALAPPDATA 'tomato\mailer') 'bin\mailer.exe'),
 
     # Optional credentials file override for mailer.
     # This is a file path, not a secret value.

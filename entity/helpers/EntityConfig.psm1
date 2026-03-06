@@ -383,10 +383,10 @@ function Initialize-EntityConfig {
     $config = New-EntityConfig
 
     # Ensure environment variables used in config imports are available during startup.
-    $utilityHubRoot = Split-Path (Split-Path $AppRoot -Parent) -Parent
-    $env:UTILITY_HUB_ROOT = $utilityHubRoot
+    $tomatoRoot = Split-Path $AppRoot -Parent
+    $env:TOMATO_ROOT = $tomatoRoot
     $env:APP_DIR = $AppRoot
-    $env:UTILS_ROOT = Join-Path $utilityHubRoot 'automations\utils'
+    $env:UTILS_ROOT = Join-Path $tomatoRoot 'utils'
 
     function Load-EntityConfigWithImports {
         param(

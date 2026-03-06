@@ -13,7 +13,7 @@ Some pipelines open a temporary “todo” file in an editor (git-rebase style) 
 
 Editor resolution order:
 
-1. `UTILITY_HUB_EDITOR`
+1. `TOMATO_EDITOR`
 2. `VISUAL`
 3. `EDITOR`
 4. If none are set:
@@ -21,9 +21,9 @@ Editor resolution order:
 
 Wait behavior details:
 
-- VS Code: if you set `UTILITY_HUB_EDITOR` to `code`, `--wait` is ensured automatically, so the pipeline resumes when you close the file.
-- Vim/Neovim: if you set `UTILITY_HUB_EDITOR` to `vim`/`nvim`, it runs in the current terminal; the pipeline resumes when you quit the editor.
-- gVim: if you set `UTILITY_HUB_EDITOR` to `gvim`, `-f` is ensured automatically (foreground), so the pipeline resumes when you close the file.
+- VS Code: if you set `TOMATO_EDITOR` to `code`, `--wait` is ensured automatically, so the pipeline resumes when you close the file.
+- Vim/Neovim: if you set `TOMATO_EDITOR` to `vim`/`nvim`, it runs in the current terminal; the pipeline resumes when you quit the editor.
+- gVim: if you set `TOMATO_EDITOR` to `gvim`, `-f` is ensured automatically (foreground), so the pipeline resumes when you close the file.
 - Notepad: the default fallback; waits until the Notepad process exits (tabbed Notepad won’t resume on just closing the tab).
 
 While the pipeline is waiting for a GUI editor to close, you can use these shortcuts in the same terminal:
@@ -33,9 +33,9 @@ While the pipeline is waiting for a GUI editor to close, you can use these short
 
 Examples (PowerShell):
 
-- For the current session: `$env:UTILITY_HUB_EDITOR = 'code --wait'`
-- Persist for future shells: `setx UTILITY_HUB_EDITOR "code --wait"`
-- Use Vim: `$env:UTILITY_HUB_EDITOR = 'vim'`
+- For the current session: `$env:TOMATO_EDITOR = 'code --wait'`
+- Persist for future shells: `setx TOMATO_EDITOR "code --wait"`
+- Use Vim: `$env:TOMATO_EDITOR = 'vim'`
 
 ## Layout
 
@@ -44,12 +44,12 @@ Examples (PowerShell):
 
 ## Entrypoint
 
-Use [App-Main.ps1](automations/entity/App-Main.ps1) as the interactive entrypoint for browsing client/accountant folders (read-only) and jumping into pipelines.
+Use [App-Main.ps1](entity/App-Main.ps1) as the interactive entrypoint for browsing client/accountant folders (read-only) and jumping into pipelines.
 
 Automation menu source:
 
 - `App-Main.ps1` reads commands from JSON config files (no script auto-discovery).
-- Public config (tracked in repo): `automations/entity/automations.json`
+- Public config (tracked in repo): `entity/automations.json`
 
 Automation config schema:
 
@@ -65,7 +65,7 @@ Import behavior:
 
 - Imported automations are expanded in-place, preserving declared order.
 - `import.path` can be absolute or relative (relative paths resolve from the JSON file containing the `import`).
-- `import.path` supports environment-variable expansion (for example: `$env:UTILITY_HUB_ROOT\\_submodules\\automation-scripts\\scripts\\export.json`).
+- `import.path` supports environment-variable expansion (for example: `$env:TOMATO_ROOT\\_submodules\\automation-scripts\\scripts\\export.json`).
 - If an import file is missing or invalid, it is ignored (non-breaking).
 - Automation commands run with working directory set to the folder of the JSON file that declared that automation.
 
@@ -80,7 +80,7 @@ Example:
 		},
 		{
 			"import": {
-				"path": "$env:UTILITY_HUB_ROOT\\_submodules\\automation-scripts\\scripts\\export.json"
+				"path": "$env:TOMATO_ROOT\\_submodules\\automation-scripts\\scripts\\export.json"
 			}
 		}
 	]
@@ -89,12 +89,12 @@ Example:
 
 Examples:
 
-- Default (loads parties config from `automations/entity/parties.json`):
+- Default (loads parties config from `entity/parties.json`):
 	- `./App-Main.ps1`
 
 Configure roots:
 
-- Configure `automations/entity/parties.json` (see `samples/parties.example.json`).
+- Configure `entity/parties.json` (see `samples/parties.example.json`).
 
 Config file schema (`parties.json`):
 
@@ -122,7 +122,7 @@ Navigation preview controls (in the preview window):
 - Left/Backspace: go up
 - `q` or Esc: quit preview
 
-Implementation: the preview UI is shared and lives in [automations/utils/Preview-Location.ps1](automations/utils/Preview-Location.ps1).
+Implementation: the preview UI is shared and lives in [utils/Preview-Location.ps1](utils/Preview-Location.ps1).
 
 ## Scripts
 

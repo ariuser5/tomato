@@ -115,7 +115,7 @@ function New-RebaseTodoText {
     )
 
     $sb = New-Object System.Text.StringBuilder
-    $null = $sb.AppendLine("# utility-hub: Label-GDriveFiles todo")
+    $null = $sb.AppendLine("# tomato: Label-GDriveFiles todo")
     $null = $sb.AppendLine("#")
     $null = $sb.AppendLine("# Commands:")
     $null = $sb.AppendLine("#   pick|p <filename>             = open interactive prompt for this file")
@@ -778,7 +778,7 @@ if ($AutoLabel) {
 }
 
 # Phase 1: rebase-style todo in editor
-$tmpTodo = Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath ("utility-hub-label-gdrivefiles-{0}.todo" -f ([guid]::NewGuid().ToString('N')))
+$tmpTodo = Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath ("tomato-label-gdrivefiles-{0}.todo" -f ([guid]::NewGuid().ToString('N')))
 $resetCount = 0
 
 $todoInitialized = $false

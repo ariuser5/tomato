@@ -183,8 +183,8 @@ function Invoke-AutomationCommand {
         [Parameter()][string]$WorkingDirectory
     )
 
-    $utilityHubRoot = Split-Path (Split-Path $AppRoot -Parent) -Parent
-    $env:UTILITY_HUB_ROOT = $utilityHubRoot
+    $tomatoRoot = Split-Path $AppRoot -Parent
+    $env:TOMATO_ROOT = $tomatoRoot
     $env:APP_DIR = $AppRoot
 
     $effectiveWorkingDirectory = $AppRoot
