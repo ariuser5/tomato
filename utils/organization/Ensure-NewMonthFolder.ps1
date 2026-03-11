@@ -40,12 +40,11 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-
-# Month short names mapping in order (jan..dec)
-$months = @("jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec")
-
 $pathModule = Join-Path $PSScriptRoot '..\PathUtils.psm1'
 Import-Module $pathModule -Force
+
+$patternsModule = Join-Path $PSScriptRoot '.\Patterns.psm1'
+Import-Module $patternsModule -Force
 
 $lastMonthScript = Join-Path $PSScriptRoot '.\Get-LastMonth.ps1'
 
@@ -92,7 +91,7 @@ while ($true) {
     
     # Get the latest month for this year
     $latestMonth = if ($yearDirs.Count -gt 0) {
-        & $lastMonthScript -Values $yearDirs -SkipInvalid $true
+        & $lastMonthScript -Values $yearDirs -SkipInvalid
     } else {
         $null
     }
@@ -101,21 +100,21 @@ while ($true) {
     $latestIdx = -1
     if ($latestMonth -and $latestMonth -match '^_*([a-z]{3})-\d{4}$') {
         $monthName = $matches[1]
-        $latestIdx = $months.IndexOf($monthName.ToLower())
+        $latestIdx = $MonthNames.IndexOf($monthName.ToLower())
     }
-    if ($latestIdx -eq ($months.Count - 1)) {
+    if ($latestIdx -eq ($MonthNames.Count - 1)) {
         Write-Host "All months exist for $currentYear. Moving to next year..." -ForegroundColor Cyan
         $currentYear++
         continue
     }
     $nextIdx = $latestIdx + 1
-    if ($nextIdx -ge $months.Count) {
+    if ($nextIdx -ge $MonthNames.Count) {
         # Should not happen, but just in case
         Write-Host "Unexpected: nextIdx out of range for $currentYear. Moving to next year..." -ForegroundColor DarkYellow
         $currentYear++
         continue
     }
-    $missing = "$($months[$nextIdx])-$currentYear"
+    $missing = "$($MonthNames[$nextIdx])-$currentYear"
     $newFolderName = "$NewFolderPrefix$missing"
     Write-Host "Creating new folder: $newFolderName" -ForegroundColor Yellow
     $targetPath = Join-UnifiedPath -Base $baseInfo.Normalized -Child $newFolderName -PathType $baseInfo.PathType
