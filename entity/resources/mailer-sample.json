@@ -1,0 +1,16 @@
+{
+	"to": ["sample@email.com"],
+	"subject": "Hello from {{COMPUTERNAME}}!",
+	"bodyFile": "resources/mailer-sample-body.html",
+	"isHtml": true,
+	"context": {
+		"variables": {
+			"CLIENT_NAME": "Sample Client",
+			"PERIOD": "2024-06",
+			"CUSTOM_MESSAGE": "This is just a custom message",
+			"HIGHLIGHT_1": "This is a highlighted point 1",
+			"HIGHLIGHT_2": "This is a highlighted point 2",
+			"HIGHLIGHT_3": "This is a highlighted point 3"
+		}
+	}
+}

@@ -1,8 +1,12 @@
 {
   "automations": [
     {
-      "alias": "sample-automation",
-      "command": "& (Join-Path $APP_DIR 'samples/Example-Automation.ps1')"
+      "alias": "Sample Automation",
+      "command": "Write-Host 'This is a sample automation command.'"
+    },
+    {
+      "alias": "Mailer - Draft From JSON",
+      "command": "& ./automations/Create-MailerDraft.ps1 'resources/mailer-sample.json'"
     },
     {
       "import": {

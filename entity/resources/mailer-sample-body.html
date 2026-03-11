@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Mailer Sample</title>
+</head>
+<body style="font-family:Segoe UI, Tahoma, Arial, sans-serif; color:#222; line-height:1.5;">
+	<p>Hi {{CLIENT_NAME}},</p>
+
+	<p>
+		Please find the update for <strong>{{PERIOD}}</strong>.
+	</p>
+
+	<ul>
+		<li>{{HIGHLIGHT_1}}</li>
+		<li>{{HIGHLIGHT_2}}</li>
+		<li>{{HIGHLIGHT_3}}</li>
+	</ul>
+
+	<p>{{CUSTOM_MESSAGE}}</p>
+
+	<p>
+		Best regards,<br>
+		{{COMPUTERNAME}}
+	</p>
+</body>
+</html>
