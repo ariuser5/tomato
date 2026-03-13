@@ -6,7 +6,7 @@
     },
     {
       "alias": "Mailer - Draft From JSON",
-      "command": "& ./automations/Create-MailerDraft.ps1 'resources/mailer-sample.json'"
+      "command": "& ./samples/Create-MailerDraft.ps1 'resources/mailer-sample.json'"
     }
   ]
 }

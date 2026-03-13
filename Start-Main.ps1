@@ -1,6 +1,6 @@
 <#
 -------------------------------------------------------------------------------
-App-Main.ps1
+Start-Main.ps1
 -------------------------------------------------------------------------------
 Interactive entrypoint for entity automations.
 
@@ -12,7 +12,7 @@ Goals:
 Notes:
   - This script intentionally does NOT implement workflow logic (month close, labels,
     archival, emailing, etc). It only helps you explore and jump into existing tools.
-    - The navigation preview UI is implemented by: utils/Preview-Location.ps1
+        - The navigation preview UI is implemented by: base/utils/Preview-Location.ps1
 -------------------------------------------------------------------------------
 #>
 
@@ -25,13 +25,19 @@ $ErrorActionPreference = 'Stop'
 # Helpers
 # -----------------------------------------------------------------------------
 
-$entityConfigModule = Join-Path $PSScriptRoot '.\helpers\EntityConfig.psm1'
+$baseRoot = Join-Path $PSScriptRoot 'base'
+
+if (-not (Test-Path -LiteralPath $baseRoot -PathType Container)) {
+    throw "Missing required base folder: $baseRoot"
+}
+
+$entityConfigModule = Join-Path $baseRoot '.\helpers\EntityConfig.psm1'
 Import-Module $entityConfigModule -Force
 
-$automationConfigModule = Join-Path $PSScriptRoot '.\helpers\AutomationConfig.psm1'
+$automationConfigModule = Join-Path $baseRoot '.\helpers\AutomationConfig.psm1'
 Import-Module $automationConfigModule -Force
 
-$init = Initialize-EntityConfig -AppRoot $PSScriptRoot
+$init = Initialize-EntityConfig -AppRoot $baseRoot
 $Config = $init.Config
 
 function Write-Heading {
@@ -82,7 +88,7 @@ function Start-Preview {
         [Parameter(Mandatory = $true)][string]$Title
     )
 
-    $previewScript = Join-Path $PSScriptRoot '..\utils\Preview-Location.ps1'
+    $previewScript = Join-Path $baseRoot '.\utils\Preview-Location.ps1'
     $previewScript = (Resolve-Path -LiteralPath $previewScript -ErrorAction Stop).Path
 
     $previewRoot = ($Root ?? '').Trim()
@@ -219,10 +225,10 @@ function Run-Automation {
     )
 
     # Set environment variables for automations
-    $tomatoRoot = Split-Path $PSScriptRoot -Parent
+    $tomatoRoot = $PSScriptRoot
     $env:TOMATO_ROOT = $tomatoRoot
-    $env:APP_DIR = $PSScriptRoot
-    $env:UTILS_ROOT = Join-Path $tomatoRoot 'utils'
+    $env:BASE_DIR = $baseRoot
+    $env:UTILS_ROOT = Join-Path $baseRoot 'utils'
 
     Write-Host ''
     Write-Info "Running automation '$Alias'"
@@ -230,7 +236,7 @@ function Run-Automation {
     Write-Info "Working directory: $WorkingDirectory"
     Write-Host ''
 
-    $exitCode = Invoke-AutomationCommand -Alias $Alias -Command $Command -AppRoot $PSScriptRoot -WorkingDirectory $WorkingDirectory
+    $exitCode = Invoke-AutomationCommand -Alias $Alias -Command $Command -AppRoot $baseRoot -WorkingDirectory $WorkingDirectory
 
     Write-Host ''
     Write-Info "Automation finished (exit code: $exitCode)"
@@ -246,10 +252,10 @@ function Automations-Menu {
         Write-Info 'Available automations.'
         Write-Host ''
 
-        $automations = @(Get-Automations -AppRoot $PSScriptRoot)
+        $automations = @(Get-Automations -AppRoot $baseRoot)
         if (-not $automations -or $automations.Count -eq 0) {
             Write-Warn 'No automations found.'
-            $paths = Get-AutomationConfigPaths -AppRoot $PSScriptRoot
+            $paths = Get-AutomationConfigPaths -AppRoot $baseRoot
             Write-Info "Expected config files:"
             Write-Info "- $($paths.Public)"
             Write-Host ''
@@ -260,12 +266,12 @@ function Automations-Menu {
         $automation = Select-FromList -Title 'Select automation' -Items $automations -ItemLabel 'automations' -AllowQuit
         if ($null -eq $automation -or -not $automation.Command) { return }
 
-        $workingDirectory = $PSScriptRoot
+        $workingDirectory = $baseRoot
         if ($automation.PSObject.Properties.Name -contains 'Source' -and $automation.Source) {
             try {
                 $workingDirectory = Split-Path -Parent ([string]$automation.Source)
             } catch {
-                $workingDirectory = $PSScriptRoot
+                $workingDirectory = $baseRoot
             }
         }
 
@@ -298,14 +304,14 @@ function Show-Settings {
     }
 
     Write-Host ''
-    $automationConfigPaths = Get-AutomationConfigPaths -AppRoot $PSScriptRoot
+    $automationConfigPaths = Get-AutomationConfigPaths -AppRoot $baseRoot
     Write-Info "Automation config: $($automationConfigPaths.Public)"
 
-    $automationCount = (Get-Automations -AppRoot $PSScriptRoot).Count
+    $automationCount = (Get-Automations -AppRoot $baseRoot).Count
     Write-Info "Configured automations: $automationCount"
 
     Write-Host ''
-    Write-Info "Parties config: $(Join-Path $PSScriptRoot 'parties.json')"
+    Write-Info "Parties config: $(Join-Path $baseRoot 'conf/parties.json')"
     Write-Host ''
     Read-Host 'Press Enter to go back'
 }

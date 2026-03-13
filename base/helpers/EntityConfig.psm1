@@ -34,7 +34,7 @@ function Get-DefaultEntityPartiesFile {
         [Parameter(Mandatory = $true)][string]$AppRoot
     )
 
-    return Join-Path $AppRoot 'parties.json'
+    return Join-Path $AppRoot 'conf/parties.json'
 }
 
 function Import-EntityConfigJson {
@@ -385,8 +385,8 @@ function Initialize-EntityConfig {
     # Ensure environment variables used in config imports are available during startup.
     $tomatoRoot = Split-Path $AppRoot -Parent
     $env:TOMATO_ROOT = $tomatoRoot
-    $env:APP_DIR = $AppRoot
-    $env:UTILS_ROOT = Join-Path $tomatoRoot 'utils'
+    $env:BASE_DIR = $AppRoot
+    $env:UTILS_ROOT = Join-Path $AppRoot 'utils'
 
     function Load-EntityConfigWithImports {
         param(

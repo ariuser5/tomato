@@ -72,7 +72,7 @@ if ([string]::IsNullOrWhiteSpace($configPathInput) -or $configPathInput -eq 'q')
 
 $bootstrapBases = @(
     (Get-Location).Path,
-    $env:APP_DIR,
+    $env:BASE_DIR,
     $env:TOMATO_ROOT
 )
 

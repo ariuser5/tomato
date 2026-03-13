@@ -23,10 +23,18 @@ function Get-AutomationConfigPaths {
         [Parameter(Mandatory = $true)][string]$AppRoot
     )
 
-    $publicConfigPath = Join-Path $AppRoot 'automations.json'
+    $preferredConfigPath = Join-Path $AppRoot 'conf/automations.json'
+    $legacyConfigPath = Join-Path $AppRoot 'automations.json'
+
+    $publicConfigPath = $preferredConfigPath
+    if (-not (Test-Path -LiteralPath $preferredConfigPath -PathType Leaf) -and (Test-Path -LiteralPath $legacyConfigPath -PathType Leaf)) {
+        $publicConfigPath = $legacyConfigPath
+    }
 
     return [pscustomobject]@{
-        Public = $publicConfigPath
+        Public    = $publicConfigPath
+        Preferred = $preferredConfigPath
+        Legacy    = $legacyConfigPath
     }
 }
 
@@ -154,7 +162,7 @@ function Get-Automations {
     $mergedByAlias = @{}
     $orderedAliases = @()
 
-    $configs = @($paths.Public)
+    $configs = @($paths.Legacy, $paths.Preferred) | Select-Object -Unique
 
     foreach ($configPath in $configs) {
         $entries = @(Read-AutomationEntriesFromFile -ConfigPath $configPath)
@@ -185,7 +193,8 @@ function Invoke-AutomationCommand {
 
     $tomatoRoot = Split-Path $AppRoot -Parent
     $env:TOMATO_ROOT = $tomatoRoot
-    $env:APP_DIR = $AppRoot
+    $env:BASE_DIR = $AppRoot
+    $env:UTILS_ROOT = Join-Path $AppRoot 'utils'
 
     $effectiveWorkingDirectory = $AppRoot
     if ($WorkingDirectory -and (Test-Path -LiteralPath $WorkingDirectory -PathType Container)) {
