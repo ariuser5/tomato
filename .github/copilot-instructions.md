@@ -2,12 +2,12 @@
 
 ## Project Purpose
 - This repository orchestrates accounting and monthly-report workflows with PowerShell.
-- The entrypoint is `entity/App-Main.ps1`, which discovers and runs automations from JSON metadata.
+- The entrypoint is `base/entity/App-Main.ps1`, which discovers and runs automations from JSON metadata.
+- Shared/base workflow building blocks live under `base/` (`base/entity`, `base/gdrive`, `base/gmail`, `base/utils`).
+- The repository root is intentionally kept open for extender/custom overlays that should not be part of the base image.
 
 ## Automation Conventions
-- Prefer small automation wrappers under `_submodules/automation-scripts/scripts`.
-- Register public automations in `_submodules/automation-scripts/scripts/automations-meta.json`.
-- Keep automation commands compatible with `entity/helpers/AutomationConfig.psm1` expectations (`alias` + `command`).
+- Keep automation commands compatible with `base/entity/helpers/AutomationConfig.psm1` expectations (`alias` + `command`).
 - Assume `App-Main.ps1` sets these env vars before running automations:
   - `TOMATO_ROOT`
   - `APP_DIR`
