@@ -23,8 +23,10 @@ function Get-AutomationConfigPaths {
         [Parameter(Mandatory = $true)][string]$AppRoot
     )
 
-    $preferredConfigPath = Join-Path $AppRoot 'conf/automations.json'
-    $legacyConfigPath = Join-Path $AppRoot 'automations.json'
+    $tomatoRoot = Split-Path $AppRoot -Parent
+    $preferredConfigPath = Join-Path $tomatoRoot 'conf/automations.json'
+    $legacyConfigPath = Join-Path $AppRoot 'conf/automations.json'
+    $legacyRootConfigPath = Join-Path $AppRoot 'automations.json'
 
     $publicConfigPath = $preferredConfigPath
     if (-not (Test-Path -LiteralPath $preferredConfigPath -PathType Leaf) -and (Test-Path -LiteralPath $legacyConfigPath -PathType Leaf)) {
@@ -35,6 +37,7 @@ function Get-AutomationConfigPaths {
         Public    = $publicConfigPath
         Preferred = $preferredConfigPath
         Legacy    = $legacyConfigPath
+        LegacyRoot = $legacyRootConfigPath
     }
 }
 
@@ -162,7 +165,7 @@ function Get-Automations {
     $mergedByAlias = @{}
     $orderedAliases = @()
 
-    $configs = @($paths.Legacy, $paths.Preferred) | Select-Object -Unique
+    $configs = @($paths.LegacyRoot, $paths.Legacy, $paths.Preferred) | Select-Object -Unique
 
     foreach ($configPath in $configs) {
         $entries = @(Read-AutomationEntriesFromFile -ConfigPath $configPath)

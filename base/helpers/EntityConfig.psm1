@@ -34,7 +34,8 @@ function Get-DefaultEntityPartiesFile {
         [Parameter(Mandatory = $true)][string]$AppRoot
     )
 
-    return Join-Path $AppRoot 'conf/parties.json'
+    $tomatoRoot = Split-Path $AppRoot -Parent
+    return Join-Path $tomatoRoot 'conf/parties.json'
 }
 
 function Import-EntityConfigJson {

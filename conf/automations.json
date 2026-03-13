@@ -2,7 +2,7 @@
   "automations": [
     {
       "import": {
-        "path": "./samples/automations.json"
+        "path": "../base/samples/automations.json"
       }
     }
   ]

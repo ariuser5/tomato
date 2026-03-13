@@ -1,0 +1,16 @@
+{
+  "automations": [
+    {
+      "alias": "Sample Automation",
+      "command": "Write-Host 'This is a sample automation command.'"
+    },
+    {
+      "alias": "Call PowerShell Script Example",
+      "command": "& ./automations/Example-Script.ps1"
+    },
+    {
+      "alias": "Mailer - Draft From JSON",
+      "command": "& ./automations/Create-MailerDraft.ps1 '../resources/mailer-sample.json'"
+    }
+  ]
+}

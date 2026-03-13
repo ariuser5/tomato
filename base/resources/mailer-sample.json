@@ -1,7 +1,7 @@
 {
 	"to": ["sample@email.com"],
 	"subject": "Hello from {{COMPUTERNAME}}!",
-	"bodyFile": "resources/mailer-sample-body.html",
+	"bodyFile": "./mailer-sample-body.html",
 	"isHtml": true,
 	"context": {
 		"variables": {

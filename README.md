@@ -2,8 +2,8 @@
 This repository contains a reusable base for PowerShell automation workflows.
 
 ## Repository layout
+- `conf/`: root configuration for parties and automation menu imports.
 - `base/`: shared "base image" content that other projects can consume and customize.
-	- `base/conf/`: JSON configuration for parties and automation menu imports.
 	- `base/helpers/`: config-loading and automation-invocation modules.
 	- `base/gdrive/`: Google Drive helper scripts.
 	- `base/gmail/`: Gmail helper scripts.
@@ -33,8 +33,8 @@ This repository contains a reusable base for PowerShell automation workflows.
 	- Shared environment setup for launched automations (`TOMATO_ROOT`, `BASE_DIR`, `UTILS_ROOT`)
 
 ### Configuration model
-- Base automation config entrypoint: `base/conf/automations.json`
-- Base parties config entrypoint: `base/conf/parties.json`
+- Base automation config entrypoint: `conf/automations.json`
+- Base parties config entrypoint: `conf/parties.json`
 - Both support `import.path` so projects can compose local/custom overlays.
 - Relative import paths resolve from the JSON file that declares the import.
 - Missing or invalid import files are ignored to keep startup resilient.

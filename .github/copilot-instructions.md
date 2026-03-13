@@ -3,7 +3,8 @@
 ## Project Purpose
 - This repository orchestrates accounting and monthly-report workflows with PowerShell.
 - The entrypoint is `Start-Main.ps1`, which discovers and runs automations from JSON metadata.
-- Shared/base workflow building blocks live under `base/` (`base/conf`, `base/helpers`, `base/gdrive`, `base/gmail`, `base/utils`).
+- Shared/base workflow building blocks live under `base/` (`base/helpers`, `base/gdrive`, `base/gmail`, `base/utils`).
+- Configuration entrypoints live at the repository root under `conf/`.
 - The repository root is intentionally kept open for extender/custom overlays that should not be part of the base image.
 
 ## Automation Conventions

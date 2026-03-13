@@ -311,7 +311,7 @@ function Show-Settings {
     Write-Info "Configured automations: $automationCount"
 
     Write-Host ''
-    Write-Info "Parties config: $(Join-Path $baseRoot 'conf/parties.json')"
+    Write-Info "Parties config: $(Join-Path $PSScriptRoot 'conf/parties.json')"
     Write-Host ''
     Read-Host 'Press Enter to go back'
 }
