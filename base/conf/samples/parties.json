@@ -1,0 +1,30 @@
+{
+  "accountants": [
+    {
+      "name": "AccountantA",
+      "data": {
+        "location": "path/to/accountantA/data"
+      }
+    },
+    {
+      "name": "AccountantB",
+      "data": {
+        "location": "path/to/accountantB/data"
+      }
+    }
+  ],
+  "clients": [
+    {
+      "name": "ClientA",
+      "data": {
+        "location": "path/to/clientA/data"
+      }
+    },
+    {
+      "name": "ClientB",
+      "data": {
+        "location": "path/to/clientB/data"
+      }
+    }
+  ]
+}

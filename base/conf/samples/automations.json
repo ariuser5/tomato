@@ -7,11 +7,6 @@
     {
       "alias": "Mailer - Draft From JSON",
       "command": "& ./automations/Create-MailerDraft.ps1 'resources/mailer-sample.json'"
-    },
-    {
-      "import": {
-        "path": "$env:TOMATO_ROOT/_submodules/automation-scripts/scripts/automations-meta.json"
-      }
     }
   ]
 }

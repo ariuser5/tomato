@@ -1,0 +1,9 @@
+{
+  "automations": [
+    {
+      "import": {
+        "path": "./samples/automations.json"
+      }
+    }
+  ]
+}
