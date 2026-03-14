@@ -38,8 +38,14 @@
 
 $ErrorActionPreference = "Stop"
 
-$pathModule = Join-Path $PSScriptRoot '..\PathUtils.psm1'
+$pathModule = Join-Path $PSScriptRoot '..\..\utils\PathUtils.psm1'
 Import-Module $pathModule -Force
+
+$commandUtilsModule = Join-Path $PSScriptRoot '..\..\utils\common\CommandUtils.psm1'
+Import-Module $commandUtilsModule -Force
+
+$resultUtilsModule = Join-Path $PSScriptRoot '..\..\utils\common\ResultUtils.psm1'
+Import-Module $resultUtilsModule -Force
 
 $src = Resolve-UnifiedPath -Path $SourcePath -PathType $SourcePathType
 $dst = Resolve-UnifiedPath -Path $DestinationPath -PathType $DestinationPathType
@@ -51,15 +57,10 @@ if ($src.PathType -eq 'Local') {
         exit 1
     }
 } else {
-    if (-not (Get-Command rclone -ErrorAction SilentlyContinue)) {
-        Write-Error "rclone not found on PATH. Install rclone and/or restart the shell."
-        exit 1
-    }
+    Assert-RcloneAvailable
+
     try {
-        & rclone lsf $src.Normalized --max-depth 1 | Out-Null
-        if ($LASTEXITCODE -ne 0) {
-            throw "rclone lsf failed (exit $LASTEXITCODE)"
-        }
+        Invoke-Rclone -Arguments @('lsf', $src.Normalized, '--max-depth', '1') -ErrorMessage "Source folder not accessible: $($src.Normalized)" | Out-Null
     } catch {
         Write-Error "Source folder not accessible: $($src.Normalized)"
         exit 1
@@ -110,17 +111,10 @@ if ($src.PathType -eq 'Local' -and $dst.PathType -eq 'Local') {
         exit 2
     }
 } else {
-    if (-not (Get-Command rclone -ErrorAction SilentlyContinue)) {
-        Write-Error "rclone not found on PATH. Install rclone and/or restart the shell."
-        exit 2
-    }
+    Assert-RcloneAvailable
 
     try {
-        $null = rclone copy $src.Normalized $dst.Normalized --progress --verbose
-        if ($LASTEXITCODE -ne 0) {
-            Write-Error "rclone copy failed with exit code $LASTEXITCODE"
-            exit 2
-        }
+        Invoke-Rclone -Arguments @('copy', $src.Normalized, $dst.Normalized, '--progress', '--verbose') -ErrorMessage "Failed to copy files from '$($src.Normalized)' to '$($dst.Normalized)'" | Out-Null
     } catch {
         Write-Error "Failed to copy files: $_"
         exit 2
@@ -128,8 +122,7 @@ if ($src.PathType -eq 'Local' -and $dst.PathType -eq 'Local') {
 }
 
 Write-Host "`n✓ Successfully copied files to: $($dst.Normalized)" -ForegroundColor Green
-Write-Output ([pscustomobject]@{
-    Status = 'Copied'
-    Path = $dst.Normalized
-})
+Write-Output (New-ToolResult -Status 'Copied' -Data @{
+        Path = $dst.Normalized
+    })
 exit 0

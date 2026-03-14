@@ -7,7 +7,11 @@ This repository contains a reusable base for PowerShell automation workflows.
 	- `base/helpers/`: config-loading and automation-invocation modules.
 	- `base/gdrive/`: Google Drive helper scripts.
 	- `base/gmail/`: Gmail helper scripts.
-	- `base/utils/`: reusable utilities used by automations and workflows.
+	- `base/utils/`: reusable generic utilities used by automations and workflows.
+		- `base/utils/common/`: cross-cutting helpers (external command wrappers, result/output helpers).
+	- `base/tomatoflow/`: recommended workflow implementation package.
+		- `base/tomatoflow/organization/`: Tomatoflow orchestration scripts.
+		- `base/tomatoflow/organization/modules/`: reusable Tomatoflow-specific modules.
 - `Start-Main.ps1`: interactive root entrypoint that launches the base runtime.
 
 ## Design intent
@@ -109,3 +113,31 @@ Recommended commit message:
 ### Run
 - From repository root:
 	- `pwsh -NoProfile -File ./Start-Main.ps1`
+
+## Utility framework conventions
+
+### Split workflow scripts from reusable modules
+- Keep workflow-agnostic utilities under `base/utils`.
+- Keep the recommended workflow implementation under `base/tomatoflow`.
+- Keep orchestration in scripts under `base/tomatoflow/organization/*.ps1`.
+- Move reusable logic into modules under:
+	- `base/utils/common/*.psm1` (generic)
+	- `base/tomatoflow/organization/modules/*.psm1` (workflow-specific)
+- Prefer importing modules instead of duplicating helper functions across scripts.
+
+### Output contract for script composition
+- Use `Write-Host` for human-readable logs and progress.
+- Use `Write-Output` only for final machine-consumable results.
+- Final script output should be a single structured object (for example via `New-ToolResult`).
+
+### External command consistency
+- Use shared wrappers from `base/utils/common/CommandUtils.psm1`:
+	- `Assert-RcloneAvailable`
+	- `Invoke-Rclone`
+	- `Test-ExecutableAvailable`
+- Avoid repeating raw command/exit-code handling inline in each script.
+
+### Promotion rule for custom overlays
+- Keep project-specific logic in your custom overlay repo by default.
+- Promote code to `base/utils` only when it is generic and reusable across projects.
+- If logic is specific to the recommended workflow pattern, place it in `base/tomatoflow`.

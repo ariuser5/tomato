@@ -102,6 +102,18 @@ function Resolve-Labels {
 $editorModule = Join-Path $PSScriptRoot '..\EditorUtils.psm1'
 Import-Module $editorModule -Force
 
+$labelUtilsModule = Join-Path $PSScriptRoot '.\modules\LabelUtils.psm1'
+Import-Module $labelUtilsModule -Force
+
+$driveUtilsModule = Join-Path $PSScriptRoot '.\modules\DriveUtils.psm1'
+Import-Module $driveUtilsModule -Force
+
+$commandUtilsModule = Join-Path $PSScriptRoot '..\..\utils\common\CommandUtils.psm1'
+Import-Module $commandUtilsModule -Force
+
+$resultUtilsModule = Join-Path $PSScriptRoot '..\..\utils\common\ResultUtils.psm1'
+Import-Module $resultUtilsModule -Force
+
 function New-RebaseTodoText {
     param(
         [Parameter(Mandatory = $true)]
@@ -406,11 +418,7 @@ function Invoke-InteractiveForItem {
 
             if ($PSCmdlet.ShouldProcess($remoteItem, "Rename to $targetRemote")) {
                 Write-Host "Renaming to: $targetBasename" -ForegroundColor Yellow
-                & rclone moveto $remoteItem $targetRemote
-                if ($LASTEXITCODE -ne 0) {
-                    Write-Error "Rename failed (exit $LASTEXITCODE): $Basename -> $targetBasename"
-                    continue
-                }
+                Invoke-Rclone -Arguments @('moveto', $remoteItem, $targetRemote) -ErrorMessage "Rename failed: $Basename -> $targetBasename" | Out-Null
 
                 [void]$ExistingNames.Remove($Basename)
                 [void]$ExistingNames.Add($targetBasename)
@@ -442,82 +450,6 @@ function Invoke-InteractiveForItem {
     }
 }
 
-function Get-RcloneJson {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string[]]$RcloneArguments
-    )
-
-    $raw = & rclone @RcloneArguments
-    $exitCode = $LASTEXITCODE
-    if ($exitCode -ne 0) {
-        throw "rclone failed (exit $exitCode): rclone $($RcloneArguments -join ' ')"
-    }
-
-    if (-not $raw) {
-        return @()
-    }
-
-    return ($raw | ConvertFrom-Json)
-}
-
-function Get-DriveBrowserUrl {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$RemoteItemPath,
-
-        [Parameter(Mandatory = $true)]
-        [string]$FallbackQuery
-    )
-
-    try {
-        $stat = Get-RcloneJson -RcloneArguments @('lsjson', '--stat', '--original', $RemoteItemPath)
-        # --stat returns a single object (not array) for supported backends
-        $id = $null
-        if ($null -ne $stat) {
-            if ($stat.PSObject.Properties.Name -contains 'OrigID' -and $stat.OrigID) {
-                $id = $stat.OrigID
-            } elseif ($stat.PSObject.Properties.Name -contains 'ID' -and $stat.ID) {
-                $id = $stat.ID
-            }
-        }
-
-        if ($id) {
-            return "https://drive.google.com/open?id=$id"
-        }
-    } catch {
-        # fall through to search URL
-    }
-
-    $encoded = [System.Uri]::EscapeDataString($FallbackQuery)
-    return "https://drive.google.com/drive/search?q=$encoded"
-}
-
-function Get-UniqueBasename {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$DesiredBasename,
-
-        [Parameter(Mandatory = $true)]
-        [System.Collections.Generic.HashSet[string]]$ExistingNames
-    )
-
-    if (-not $ExistingNames.Contains($DesiredBasename)) {
-        return $DesiredBasename
-    }
-
-    $ext = [System.IO.Path]::GetExtension($DesiredBasename)
-    $stem = [System.IO.Path]::GetFileNameWithoutExtension($DesiredBasename)
-
-    for ($i = 2; $i -lt 10000; $i++) {
-        $candidate = "$stem ($i)$ext"
-        if (-not $ExistingNames.Contains($candidate)) {
-            return $candidate
-        }
-    }
-
-    throw "Unable to find a unique name for '$DesiredBasename'."
-}
 
 function Select-Label {
     param(
@@ -540,21 +472,6 @@ function Select-Label {
     }
 
     return $Labels[$selectedIndex]
-}
-
-function New-AllowedLabelsRegex {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string[]]$ResolvedLabels
-    )
-
-    $escaped = $ResolvedLabels | ForEach-Object { [regex]::Escape($_) }
-    if (-not $escaped -or $escaped.Count -eq 0) {
-        return $null
-    }
-
-    $pattern = "^\[(?:$($escaped -join '|'))\]\s+"
-    return [regex]::new($pattern, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
 }
 
 # Resolve labels
@@ -582,7 +499,7 @@ if ($ExcludeNameRegex) {
     $excludeRegexObj = [regex]$ExcludeNameRegex
 }
 
-$pathModule = Join-Path $PSScriptRoot '..\PathUtils.psm1'
+$pathModule = Join-Path $PSScriptRoot '..\..\utils\PathUtils.psm1'
 Import-Module $pathModule -Force
 
 $baseInfo = $null
@@ -610,10 +527,7 @@ if ($baseInfo.PathType -eq 'Local') {
 }
 
 if ($baseInfo.PathType -eq 'Remote') {
-    if (-not (Get-Command rclone -ErrorAction SilentlyContinue)) {
-        Write-Error "rclone not found on PATH. Install it (e.g., 'winget install Rclone.Rclone') and ensure it's available in your session."
-        exit 1
-    }
+    Assert-RcloneAvailable
 
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host "GDrive Labeling" -ForegroundColor Cyan
@@ -738,10 +652,7 @@ if ($AutoLabel) {
                 
                 if ($PSCmdlet.ShouldProcess($remoteItem, "Rename to $targetRemote")) {
                     Write-Host "Renaming: $basename -> $targetBasename" -ForegroundColor Yellow
-                    & rclone moveto $remoteItem $targetRemote
-                    if ($LASTEXITCODE -ne 0) {
-                        throw "rclone moveto failed (exit $LASTEXITCODE)"
-                    }
+                    Invoke-Rclone -Arguments @('moveto', $remoteItem, $targetRemote) -ErrorMessage "Rename failed: $basename -> $targetBasename" | Out-Null
 
                     [void]$existingNames.Remove($basename)
                     [void]$existingNames.Add($targetBasename)
@@ -772,6 +683,14 @@ if ($AutoLabel) {
     Write-Host "Renamed:         $renamed" -ForegroundColor Gray
     Write-Host "Already-labeled: $alreadyLabeledSkipped" -ForegroundColor Gray
     Write-Host "Failed:          $failed" -ForegroundColor Gray
+
+    Write-Output (New-ToolResult -Status 'Completed' -Data @{
+            Mode = 'Auto'
+            Reviewed = $processed
+            Renamed = $renamed
+            AlreadyLabeled = $alreadyLabeledSkipped
+            Failed = $failed
+        })
 
     if ($failed -gt 0) { exit 1 }
     exit 0
@@ -890,10 +809,7 @@ foreach ($op in $ops) {
                 
                 if ($PSCmdlet.ShouldProcess($remoteItem, "Rename to $targetRemote")) {
                     Write-Host "Renaming: $basename -> $targetBasename" -ForegroundColor Yellow
-                    & rclone moveto $remoteItem $targetRemote
-                    if ($LASTEXITCODE -ne 0) {
-                        throw "rclone moveto failed (exit $LASTEXITCODE)"
-                    }
+                    Invoke-Rclone -Arguments @('moveto', $remoteItem, $targetRemote) -ErrorMessage "Rename failed: $basename -> $targetBasename" | Out-Null
 
                     [void]$existingNames.Remove($basename)
                     [void]$existingNames.Add($targetBasename)
@@ -969,5 +885,14 @@ Write-Host "Todo skipped:    $skipped" -ForegroundColor Gray
 Write-Host "Todo failed:     $failed" -ForegroundColor Gray
 Write-Host "Pick renamed:    $pickRenamed" -ForegroundColor Gray
 Write-Host "Pick skipped:    $pickSkipped" -ForegroundColor Gray
+
+Write-Output (New-ToolResult -Status 'Completed' -Data @{
+        Mode = 'Interactive'
+        TodoRenamed = $renamed
+        TodoSkipped = $skipped
+        TodoFailed = $failed
+        PickRenamed = $pickRenamed
+        PickSkipped = $pickSkipped
+    })
 
 if ($failed -gt 0) { exit 1 }

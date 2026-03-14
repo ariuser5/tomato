@@ -4,11 +4,8 @@ $ErrorActionPreference = 'Stop'
 $pathModule = Join-Path $PSScriptRoot 'PathUtils.psm1'
 Import-Module $pathModule -Force
 
-function Assert-RcloneAvailable {
-    if (-not (Get-Command rclone -ErrorAction SilentlyContinue)) {
-        throw "rclone not found on PATH. Install it (e.g., 'winget install Rclone.Rclone') and ensure it's available in your session."
-    }
-}
+$commandUtilsModule = Join-Path $PSScriptRoot 'common\CommandUtils.psm1'
+Import-Module $commandUtilsModule -Force
 
 function ConvertTo-DirectoryItem {
     [CmdletBinding()]

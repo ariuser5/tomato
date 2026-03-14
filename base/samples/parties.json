@@ -1,29 +1,29 @@
 {
   "accountants": [
     {
-      "name": "AccountantA",
+      "name": "Accounting-Primary",
       "data": {
-        "location": "path/to/accountantA/data"
+        "location": "path/to/accounting-primary/rapoarte"
       }
     },
     {
-      "name": "AccountantB",
+      "name": "Accounting-Backup",
       "data": {
-        "location": "path/to/accountantB/data"
+        "location": "gdrive:parties/accounting-backup/rapoarte"
       }
     }
   ],
   "clients": [
     {
-      "name": "ClientA",
+      "name": "Client-Alpha",
       "data": {
-        "location": "path/to/clientA/data"
+        "location": "path/to/client-alpha/rapoarte"
       }
     },
     {
-      "name": "ClientB",
+      "name": "Client-Beta",
       "data": {
-        "location": "path/to/clientB/data"
+        "location": "gdrive:parties/client-beta/rapoarte"
       }
     }
   ]

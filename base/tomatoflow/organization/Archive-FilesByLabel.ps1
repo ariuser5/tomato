@@ -64,8 +64,17 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$pathModule = Join-Path $PSScriptRoot '..\PathUtils.psm1'
+$pathModule = Join-Path $PSScriptRoot '..\..\utils\PathUtils.psm1'
 Import-Module $pathModule -Force
+
+$commandUtilsModule = Join-Path $PSScriptRoot '..\..\utils\common\CommandUtils.psm1'
+Import-Module $commandUtilsModule -Force
+
+$resultUtilsModule = Join-Path $PSScriptRoot '..\..\utils\common\ResultUtils.psm1'
+Import-Module $resultUtilsModule -Force
+
+$labelUtilsModule = Join-Path $PSScriptRoot '.\modules\LabelUtils.psm1'
+Import-Module $labelUtilsModule -Force
 
 $baseInfo = $null
 try {
@@ -76,45 +85,14 @@ try {
 }
 
 if ($baseInfo.PathType -eq 'Remote') {
-    if (-not (Get-Command rclone -ErrorAction SilentlyContinue)) {
-        Write-Error "rclone not found on PATH. Install it (e.g., 'winget install Rclone.Rclone') and ensure it's available in your session."
-        exit 1
-    }
-}
-
-function Get-LabelFromBasename {
-    param([Parameter(Mandatory = $true)][string]$Basename)
-
-    if ($Basename -match '^\[([^\]]+)\]\s*') {
-        return $Matches[1]
-    }
-
-    return $null
-}
-
-function Convert-ArchiveExtension {
-    param([Parameter(Mandatory = $true)][string]$Ext)
-
-    $e = $Ext.Trim()
-    if ($e.StartsWith('.')) { $e = $e.TrimStart('.') }
-    $e = $e.ToLowerInvariant()
-    if ($e -eq 'targz') { return 'tar.gz' }
-    return $e
-}
-
-function Get-LabelFileSelector {
-    param([Parameter(Mandatory = $true)][string]$Label)
-
-    # FileNames selectors support '*' as a wildcard, while treating brackets literally.
-    # This matches files like: "[INVOICE] something.pdf"
-    return "[$Label] *"
+    Assert-RcloneAvailable
 }
 
 if (-not $ArchiveDestinationPath -or -not $ArchiveDestinationPath.Trim()) {
     $ArchiveDestinationPath = Join-UnifiedPath -Base $baseInfo.Normalized -Child 'archives' -PathType $baseInfo.PathType
 }
 
-$archiveExt = Convert-ArchiveExtension -Ext $ArchiveExtension
+$archiveExt = Convert-ArchiveExtension -Extension $ArchiveExtension
 
 $remoteFolder = $null
 $uploadRemoteName = $null
@@ -164,7 +142,7 @@ Write-Host "`nListing files..." -ForegroundColor Yellow
 
 $basenames = $null
 if ($baseInfo.PathType -eq 'Remote') {
-    $basenames = rclone lsf "$remoteFolder" --files-only
+    $basenames = Invoke-Rclone -Arguments @('lsf', $remoteFolder, '--files-only') -ErrorMessage "Failed to list remote files in '$remoteFolder'."
 } else {
     try {
         $basenames = Get-ChildItem -LiteralPath $baseInfo.LocalPath -File | Select-Object -ExpandProperty Name
@@ -223,18 +201,6 @@ $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 # Build archives locally, then upload
 $workRoot = Join-Path $env:TEMP ("tomato_label-archive_" + [System.Guid]::NewGuid().ToString())
 New-Item -ItemType Directory -Path $workRoot | Out-Null
-
-function Test-ExecutableAvailable {
-    param([Parameter(Mandatory = $true)][string]$Exe)
-
-    if (-not $Exe) { return $false }
-
-    if ($Exe -match '^[a-zA-Z]:\\' -or $Exe.Contains('\\') -or $Exe.Contains('/')) {
-        return (Test-Path -LiteralPath $Exe -PathType Leaf)
-    }
-
-    return ($null -ne (Get-Command $Exe -ErrorAction SilentlyContinue))
-}
 
 function New-ArchiveFile {
     param(
@@ -312,8 +278,6 @@ try {
             if ($PSCmdlet.ShouldProcess("${uploadRemoteName}:$uploadRemotePath", "Create + upload archive for label '$label'")) {
                 Write-Host "`n[$label] Creating archive..." -ForegroundColor Yellow
 
-                $include = $null
-                $exclude = $null
                 $fileNames = $null
                 if ($label -eq $UnlabeledGroupName) {
                     # Unlabeled = explicit set of basenames (avoid rclone glob escaping issues)
@@ -376,6 +340,10 @@ try {
     }
 
     Write-Host "`n✓ All label archives completed." -ForegroundColor Green
+    Write-Output (New-ToolResult -Status 'Completed' -Data @{
+            GroupCount = $groups.Count
+            Destination = if ($baseInfo.PathType -eq 'Remote') { "${uploadRemoteName}:$uploadRemotePath" } else { $ArchiveDestinationPath }
+        })
 }
 catch {
     Write-Error "Label archive process failed: $($_.Exception.Message)"

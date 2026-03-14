@@ -49,6 +49,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+$commandUtilsModule = Join-Path $PSScriptRoot 'common\CommandUtils.psm1'
+Import-Module $commandUtilsModule -Force
+
 function Write-Heading {
     param([Parameter(Mandatory = $true)][string]$Text)
     Write-Host $Text -ForegroundColor Cyan
@@ -114,12 +117,6 @@ function Truncate-Text {
 function Assert-Interactive {
     if (-not $Host.UI -or -not $Host.UI.RawUI) {
         throw 'This script is interactive and requires a console host.'
-    }
-}
-
-function Assert-Rclone {
-    if (-not (Get-Command rclone -ErrorAction SilentlyContinue)) {
-        throw "rclone not found on PATH. Install it (e.g., 'winget install Rclone.Rclone') and ensure it's available in your session."
     }
 }
 
@@ -597,7 +594,7 @@ function Get-PreviewFolders {
             ForEach-Object { $_.Name }
     }
 
-    Assert-Rclone
+    Assert-RcloneAvailable
 
     if (-not $RcloneRemote -or -not $RcloneRemote.Trim()) {
         throw 'Navigator=rclone: missing remote name.'
@@ -637,7 +634,7 @@ function Get-PreviewFiles {
             ForEach-Object { $_.Name }
     }
 
-    Assert-Rclone
+    Assert-RcloneAvailable
 
     if (-not $RcloneRemote -or -not $RcloneRemote.Trim()) {
         throw 'Navigator=rclone: missing remote name.'

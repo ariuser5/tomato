@@ -23,6 +23,9 @@ Exported functions:
 -------------------------------------------------------------------------------
 #>
 
+$commandUtilsModule = Join-Path $PSScriptRoot 'common\CommandUtils.psm1'
+Import-Module $commandUtilsModule -Force
+
 function Split-CommandLine {
     [CmdletBinding()]
     param(
@@ -57,23 +60,6 @@ function Split-CommandLine {
     }
 
     return ,$tokens.ToArray()
-}
-
-function Test-ExecutableAvailable {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Exe
-    )
-
-    if (-not $Exe) { return $false }
-
-    # If caller provided a path, test that it exists; otherwise use PATH resolution.
-    if ($Exe -match '^[a-zA-Z]:\\' -or $Exe.Contains('\\') -or $Exe.Contains('/')) {
-        return (Test-Path -LiteralPath $Exe -PathType Leaf)
-    }
-
-    return ($null -ne (Get-Command $Exe -ErrorAction SilentlyContinue))
 }
 
 function Resolve-EditorCommand {

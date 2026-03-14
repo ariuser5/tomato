@@ -1,12 +1,44 @@
 {
   "automations": [
     {
-      "alias": "Sample Automation",
-      "command": "Write-Host 'This is a sample automation command.'"
+      "alias": "tomatoflow:month:last-folder",
+      "command": "& ../tomatoflow/organization/Get-LastMonth.ps1 -Values @('jan-2026','_feb-2026','mar-2025') -SkipInvalid"
     },
     {
-      "alias": "Call PowerShell Script Example",
-      "command": "& ./automations/Example-Script.ps1"
+      "alias": "tomatoflow:month:ensure-next",
+      "command": "& ../tomatoflow/organization/Ensure-NewMonthFolder.ps1 -Path 'path/to/entity/reports'"
+    },
+    {
+      "alias": "tomatoflow:month:init-report-pack",
+      "command": "& ../tomatoflow/organization/Create-MonthlyReport.ps1 -Path 'path/to/entity/reports'"
+    },
+    {
+      "alias": "tomatoflow:files:label",
+      "command": "& ../tomatoflow/organization/Label-Files.ps1 -Path 'path/to/entity/reports/_current-month' -Labels INVOICE,EXPENSE,BALANCE"
+    },
+    {
+      "alias": "tomatoflow:files:archive-by-label",
+      "command": "& ../tomatoflow/organization/Archive-FilesByLabel.ps1 -Path 'path/to/entity/reports/_current-month' -ArchiveExtension zip"
+    },
+    {
+      "alias": "tomatoflow:files:copy-to-delivery",
+      "command": "& ../tomatoflow/organization/Copy-ToMonthFolder.ps1 -SourcePath 'path/to/entity/reports/_current-month' -DestinationPath 'path/to/entity/delivery/_current-month'"
+    },
+    {
+      "alias": "tomatoflow:draft:accounting-handoff (placeholder)",
+      "command": "Write-Host 'Placeholder: generate draft handoff email with attachments for accounting party.' -ForegroundColor Yellow"
+    },
+    {
+      "alias": "tomatoflow:draft:client-delivery (placeholder)",
+      "command": "Write-Host 'Placeholder: generate draft delivery email for client party with selected docs.' -ForegroundColor Yellow"
+    },
+    {
+      "alias": "tomatoflow:month:close-selected (placeholder)",
+      "command": "Write-Host 'Placeholder: interactive close flow (remove _ prefix for selected month folders).' -ForegroundColor Yellow"
+    },
+    {
+      "alias": "tomatoflow:year:rollup-if-complete (placeholder)",
+      "command": "Write-Host 'Placeholder: when all months for a year are finalized, move them under year folder.' -ForegroundColor Yellow"
     },
     {
       "alias": "Mailer - Draft From JSON",

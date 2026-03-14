@@ -40,13 +40,17 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$pathModule = Join-Path $PSScriptRoot '..\PathUtils.psm1'
+$pathModule = Join-Path $PSScriptRoot '..\..\utils\PathUtils.psm1'
 Import-Module $pathModule -Force
 
-$patternsModule = Join-Path $PSScriptRoot '.\Patterns.psm1'
-Import-Module $patternsModule -Force
+$monthUtilsModule = Join-Path $PSScriptRoot '.\modules\MonthUtils.psm1'
+Import-Module $monthUtilsModule -Force
 
-$lastMonthScript = Join-Path $PSScriptRoot '.\Get-LastMonth.ps1'
+$commandUtilsModule = Join-Path $PSScriptRoot '..\..\utils\common\CommandUtils.psm1'
+Import-Module $commandUtilsModule -Force
+
+$resultUtilsModule = Join-Path $PSScriptRoot '..\..\utils\common\ResultUtils.psm1'
+Import-Module $resultUtilsModule -Force
 
 $baseInfo = $null
 $baseInfo = Resolve-UnifiedPath -Path $Path -PathType $PathType
@@ -54,12 +58,10 @@ $baseInfo = Resolve-UnifiedPath -Path $Path -PathType $PathType
 # Get list of existing directories
 $existingDirs = @()
 if ($baseInfo.PathType -eq 'Remote') {
+    Assert-RcloneAvailable
+
     try {
-        $existingDirs = @(rclone lsf $baseInfo.Normalized --dirs-only)
-        if ($LASTEXITCODE -ne 0) {
-            Write-Error "Failed to list remote directory '$($baseInfo.Normalized)' (exit code $LASTEXITCODE). Ensure rclone is configured and the path exists."
-            exit 1
-        }
+        $existingDirs = @(Invoke-Rclone -Arguments @('lsf', $baseInfo.Normalized, '--dirs-only') -ErrorMessage "Failed to list remote directory '$($baseInfo.Normalized)'.")
 
         # rclone --dirs-only returns folder names with trailing '/'
         $existingDirs = @(
@@ -83,48 +85,17 @@ if ($baseInfo.PathType -eq 'Remote') {
 $where = if ($baseInfo.PathType -eq 'Remote') { 'remote' } else { 'local' }
 Write-Host "Scanning $where directory: $($baseInfo.Normalized)" -ForegroundColor Cyan
 
-# Find the next month to create, recursing to next year if needed
-$currentYear = $StartYear
-while ($true) {
-    # Filter directories for the current year
-    $yearDirs = @($existingDirs | Where-Object { $_ -match "^_*[a-z]{3}-$currentYear$" })
-    
-    # Get the latest month for this year
-    $latestMonth = if ($yearDirs.Count -gt 0) {
-        & $lastMonthScript -Values $yearDirs -SkipInvalid
-    } else {
-        $null
-    }
-    
-    # Extract month index from the latest month
-    $latestIdx = -1
-    if ($latestMonth -and $latestMonth -match '^_*([a-z]{3})-\d{4}$') {
-        $monthName = $matches[1]
-        $latestIdx = $MonthNames.IndexOf($monthName.ToLower())
-    }
-    if ($latestIdx -eq ($MonthNames.Count - 1)) {
-        Write-Host "All months exist for $currentYear. Moving to next year..." -ForegroundColor Cyan
-        $currentYear++
-        continue
-    }
-    $nextIdx = $latestIdx + 1
-    if ($nextIdx -ge $MonthNames.Count) {
-        # Should not happen, but just in case
-        Write-Host "Unexpected: nextIdx out of range for $currentYear. Moving to next year..." -ForegroundColor DarkYellow
-        $currentYear++
-        continue
-    }
-    $missing = "$($MonthNames[$nextIdx])-$currentYear"
-    $newFolderName = "$NewFolderPrefix$missing"
-    Write-Host "Creating new folder: $newFolderName" -ForegroundColor Yellow
-    $targetPath = Join-UnifiedPath -Base $baseInfo.Normalized -Child $newFolderName -PathType $baseInfo.PathType
-    break
-}
+$nextFolder = Get-NextMissingMonthFolder -ExistingFolderNames $existingDirs -StartYear $StartYear -NewFolderPrefix $NewFolderPrefix
+$newFolderName = $nextFolder.FolderName
+$targetPath = Join-UnifiedPath -Base $baseInfo.Normalized -Child $newFolderName -PathType $baseInfo.PathType
+
+Write-Host "Creating new folder: $newFolderName" -ForegroundColor Yellow
 
 if ($baseInfo.PathType -eq 'Remote') {
-    rclone mkdir $targetPath
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "Failed to create folder '$newFolderName' at '$($baseInfo.Normalized)' (exit code $LASTEXITCODE)."
+    try {
+        Invoke-Rclone -Arguments @('mkdir', $targetPath) -ErrorMessage "Failed to create folder '$newFolderName' at '$($baseInfo.Normalized)'." | Out-Null
+    } catch {
+        Write-Error "Failed to create folder '$newFolderName' at '$($baseInfo.Normalized)'."
         exit 2
     }
 } else {
@@ -138,9 +109,8 @@ if ($baseInfo.PathType -eq 'Remote') {
 
 Write-Host "✓ Created folder: $newFolderName" -ForegroundColor Green
 Write-Host "  Path: $targetPath" -ForegroundColor Gray
-Write-Output ([pscustomobject]@{
-    Status = 'Created'
-    Path = $targetPath
-    FolderName = $newFolderName
-})
+Write-Output (New-ToolResult -Status 'Created' -Data @{
+        Path = $targetPath
+        FolderName = $newFolderName
+    })
 exit 0
