@@ -38,3 +38,6 @@
 - Make minimal, targeted edits that preserve current public aliases and commands.
 - Avoid introducing new dependencies if PowerShell built-ins can solve the task.
 - Update README or samples when new automation parameters or flows are introduced.
+- When adding/changing functionality under `base/`, update both:
+  - `base/docs/CATALOG.md` (capability catalog)
+  - `base/README.md` when package scope/boundaries or high-level guidance changed.

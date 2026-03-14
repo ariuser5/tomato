@@ -1,0 +1,37 @@
+# Base Layer
+
+This folder contains the reusable base layer that extender repositories build on.
+
+## Purpose
+- Provide reusable building blocks for automation workflows.
+- Keep generic utilities separated from workflow-specific orchestration.
+- Offer one recommended workflow package while still supporting custom overlays.
+
+## What is in base
+- `helpers/`: config loading and automation command execution.
+- `gdrive/`: Google Drive oriented helper scripts.
+- `gmail/`: Gmail helper scripts.
+- `resources/`: shared assets and templates used by automations.
+- `samples/`: sample config and sample automation entries.
+- `utils/`: generic workflow-agnostic utilities.
+- `tomatoflow/`: recommended workflow implementation package.
+
+## Tomatoflow
+
+Tomatoflow is the recommended flow provided by this base layer.
+
+It is intentionally generic and party-oriented:
+- works with entities/parties rather than a specific business type;
+- works with local and remote storage;
+- supports recurring period-based operations and handoff preparation.
+
+Tomatoflow package layout:
+- `tomatoflow/organization/`: orchestration scripts.
+- `tomatoflow/organization/modules/`: reusable Tomatoflow-specific modules.
+
+## Capability catalog
+
+For a complete list of available functionality and usage examples, see:
+- `docs/CATALOG.md`
+
+This is the canonical discovery document for developers extending the base layer.
