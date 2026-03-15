@@ -2,7 +2,7 @@
 -------------------------------------------------------------------------------
 Start-Main.ps1
 -------------------------------------------------------------------------------
-Interactive entrypoint for entity automations.
+Interactive entrypoint for automations.
 
 Goals:
     - Read-only navigation/preview of folder structures (interactive, folder-only navigation)
@@ -31,14 +31,8 @@ if (-not (Test-Path -LiteralPath $baseRoot -PathType Container)) {
     throw "Missing required base folder: $baseRoot"
 }
 
-$entityConfigModule = Join-Path $baseRoot '.\helpers\EntityConfig.psm1'
-Import-Module $entityConfigModule -Force
-
 $automationConfigModule = Join-Path $baseRoot '.\helpers\AutomationConfig.psm1'
 Import-Module $automationConfigModule -Force
-
-$init = Initialize-EntityConfig -AppRoot $baseRoot
-$Config = $init.Config
 
 function Write-Heading {
     param([Parameter(Mandatory = $true)][string]$Text)
@@ -82,105 +76,6 @@ function Wait-ForKeyPress {
     }
 }
 
-function Start-Preview {
-    param(
-        [Parameter(Mandatory = $true)][string]$Root,
-        [Parameter(Mandatory = $true)][string]$Title
-    )
-
-    $previewScript = Join-Path $baseRoot '.\utils\Preview-Location.ps1'
-    $previewScript = (Resolve-Path -LiteralPath $previewScript -ErrorAction Stop).Path
-
-    $previewRoot = ($Root ?? '').Trim()
-    if (-not $previewRoot) {
-        throw 'Empty preview root.'
-    }
-
-    $previewArgs = @(
-        '-Root', $previewRoot,
-        '-Title', $Title
-    )
-
-    if ($Config.PreviewMaxDepth -and $Config.PreviewMaxDepth -gt 0) {
-        $previewArgs += @('-MaxDepth', [string]$Config.PreviewMaxDepth)
-    }
-
-    # Invoke via pwsh to avoid argument-binding edge cases when invoking a script path directly.
-    & pwsh -NoProfile -File $previewScript @previewArgs
-}
-
-function Prompt-Choice {
-    param(
-        [Parameter(Mandatory = $true)][string]$Prompt,
-        [Parameter(Mandatory = $true)][string[]]$Valid
-    )
-
-    while ($true) {
-        $c = (Read-Host $Prompt)
-        if ($null -eq $c) { continue }
-        $c = $c.Trim()
-        foreach ($v in $Valid) {
-            if ($c.Equals($v, [System.StringComparison]::OrdinalIgnoreCase)) {
-                return $v
-            }
-        }
-        Write-Warn "Invalid choice. Valid: $($Valid -join ', ')"
-    }
-}
-
-function Select-FromList {
-    param(
-        [Parameter(Mandatory = $true)][string]$Title,
-        [Parameter(Mandatory = $true)][AllowNull()][AllowEmptyCollection()][object[]]$Items,
-        [Parameter()][string]$ItemLabel = 'item',
-        [Parameter()][switch]$AllowQuit
-    )
-
-    Write-Heading $Title
-
-    if (-not $Items -or $Items.Count -eq 0) {
-        Write-Warn "No $ItemLabel found."
-        Write-Host ''
-        Read-Host 'Press Enter to go back'
-        return $null
-    }
-
-    for ($i = 0; $i -lt $Items.Count; $i++) {
-        $n = $i + 1
-        Write-Host ("[{0}] {1}" -f $n, $Items[$i].Name) -ForegroundColor Gray
-    }
-
-    Write-Host ''
-    if ($AllowQuit) {
-        Write-Info "Type a number, 'b' to go back, or 'q' to quit."
-    } else {
-        Write-Info "Type a number, or 'b' to go back."
-    }
-
-    while ($true) {
-        $raw = Read-Host 'Select'
-        if ($null -eq $raw) { continue }
-        $raw = $raw.Trim()
-
-        if ($raw.Equals('b', [System.StringComparison]::OrdinalIgnoreCase)) {
-            return $null
-        }
-
-        if ($AllowQuit -and $raw.Equals('q', [System.StringComparison]::OrdinalIgnoreCase)) {
-            Request-Quit
-            return $null
-        }
-
-        $n = 0
-        if ([int]::TryParse($raw, [ref]$n)) {
-            if ($n -ge 1 -and $n -le $Items.Count) {
-                return $Items[$n - 1]
-            }
-        }
-
-        Write-Warn 'Invalid selection.'
-    }
-}
 
 function New-AutomationFolderNode {
     param([Parameter(Mandatory = $true)][string]$Name)
@@ -248,41 +143,6 @@ function Remove-LastItem {
     }
 
     return @($Items[0..($Items.Count - 2)])
-}
-
-function Browse-Clients {
-    $clients = Resolve-Clients -Config $Config
-
-    while ($true) {
-        Clear-Host
-        Write-Heading 'Clients'
-        Write-Info "Count: $($clients.Count)"
-        Write-Host ''
-
-        $client = Select-FromList -Title 'Select client' -Items $clients -ItemLabel 'clients' -AllowQuit
-        if (-not $client) { return }
-
-        Start-Preview -Root $client.Root -Title "Client preview: $($client.Name)"
-    }
-}
-
-function Preview-Accountant {
-    $accountants = Resolve-Accountants -Config $Config
-    if (-not $accountants -or $accountants.Count -eq 0) {
-        throw 'No accountants are configured. Set parties.json (accountants[]).'
-    }
-
-    while ($true) {
-        Clear-Host
-        Write-Heading 'Accountants'
-        Write-Info "Count: $($accountants.Count)"
-        Write-Host ''
-
-        $accountant = Select-FromList -Title 'Select accountant' -Items $accountants -ItemLabel 'accountants' -AllowQuit
-        if (-not $accountant) { return }
-
-        Start-Preview -Root $accountant.Root -Title "Accountant preview: $($accountant.Name)"
-    }
 }
 
 function Run-Automation {
@@ -438,26 +298,6 @@ function Show-Settings {
     Clear-Host
     Write-Heading 'Settings'
 
-    $accountants = Resolve-Accountants -Config $Config
-    if (-not $accountants -or $accountants.Count -eq 0) {
-        Write-Warn 'Accountants: (none configured)'
-    } else {
-        Write-Info "Accountants ($($accountants.Count)):\n"
-        foreach ($a in $accountants) {
-            Write-Host ("- {0} -> {1}" -f $a.Name, $a.Root) -ForegroundColor Gray
-        }
-    }
-
-    $clients = Resolve-Clients -Config $Config
-    if (-not $clients -or $clients.Count -eq 0) {
-        Write-Warn 'Clients: (none configured)'
-    } else {
-        Write-Info "Clients ($($clients.Count)):\n"
-        foreach ($c in $clients) {
-            Write-Host ("- {0} -> {1}" -f $c.Name, $c.Root) -ForegroundColor Gray
-        }
-    }
-
     Write-Host ''
     $automationConfigPaths = Get-AutomationConfigPaths -AppRoot $baseRoot
     Write-Info "Automation config (active): $($automationConfigPaths.Public)"
@@ -465,10 +305,6 @@ function Show-Settings {
 
     $automationCount = (Get-Automations -AppRoot $baseRoot).Count
     Write-Info "Configured automations: $automationCount"
-
-    Write-Host ''
-    $partiesConfigPath = Join-Path $PSScriptRoot 'conf/parties.json'
-    Write-Info "Parties config: $partiesConfigPath"
 
     Write-Host ''
     Write-Info 'Environment variables:'
@@ -489,9 +325,8 @@ while ($true) {
     if ($script:__ShouldQuit) { break }
     Clear-Host
 
-    Write-Heading 'Entity automation entrypoint'
-    $clientCount = (Resolve-Clients -Config $Config).Count
-    Write-Info "Clients: $clientCount"
+    Write-Heading 'Automation entrypoint'
+    Write-Info 'Select a section.'
     Write-Host ''
 
     Write-Host '[1] Automations' -ForegroundColor Gray

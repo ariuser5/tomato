@@ -18,8 +18,6 @@ This catalog is the single reference for what the base layer provides and how to
 ### Configuration entrypoints
 - File: ../conf/automations.json (repo root)
 - Purpose: declares available automations and imports.
-- File: ../conf/parties.json (repo root)
-- Purpose: declares parties/entities with their base locations.
 
 ## Core helper modules
 
@@ -29,13 +27,6 @@ This catalog is the single reference for what the base layer provides and how to
   - Get-AutomationConfigPaths
   - Get-Automations
   - Invoke-AutomationCommand
-
-### helpers/EntityConfig.psm1
-- Purpose: load and merge parties/entity config and resolve accountants/clients.
-- Key exports:
-  - Initialize-EntityConfig
-  - Resolve-Accountants
-  - Resolve-Clients
 
 ## Generic utilities (utils)
 
@@ -127,10 +118,6 @@ Tomatoflow is an opinionated workflow package that builds on the generic utiliti
 ### Sample automations menu
 - File: samples/automations.json
 - Purpose: demonstrates a Tomatoflow-style automation menu including placeholders for not-yet-implemented steps.
-
-### Sample parties configuration
-- File: samples/parties.json
-- Purpose: demonstrates parties setup with two accountants and two clients.
 
 ## Maintenance rule
 

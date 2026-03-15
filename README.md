@@ -2,7 +2,7 @@
 This repository contains a reusable base for PowerShell automation workflows.
 
 ## Repository layout
-- `conf/`: root configuration for parties and automation menu imports.
+- `conf/`: root configuration for automation menu imports.
 - `base/`: shared "base image" content that other projects can consume and customize.
 	- `base/helpers/`: config-loading and automation-invocation modules.
 	- `base/gdrive/`: Google Drive helper scripts.
@@ -72,12 +72,11 @@ git push origin main
 ### Customize configuration after first base merge
 After your first merge from the base image, create a dedicated commit in your own repo where you update:
 - `conf/automations.json`
-- `conf/parties.json`
 
 Add your own static data, imports, and automations there. The base image is intended to remain stable for these files, and we will try to avoid changing them as much as possible to reduce merge friction for consumers.
 
 Recommended commit message:
-- `customize conf/automations.json and conf/parties.json for <your-project>`
+- `customize conf/automations.json for <your-project>`
 
 ## Entrypoint
 - Start from `Start-Main.ps1`.
@@ -93,13 +92,11 @@ Recommended commit message:
 - The main app is interactive and focuses on discovery/launch, not business logic.
 - `Start-Main.ps1` provides:
 	- Automation menu execution from JSON metadata
-	- Read-only client/accountant location browsing through preview screens
 	- Shared environment setup for launched automations (`TOMATO_ROOT`, `BASE_DIR`, `UTILS_ROOT`)
 
 ### Configuration model
 - Base automation config entrypoint: `conf/automations.json`
-- Base parties config entrypoint: `conf/parties.json`
-- Both support `import.path` so projects can compose local/custom overlays.
+- Supports `import.path` so projects can compose local/custom overlays.
 - Relative import paths resolve from the JSON file that declares the import.
 - Missing or invalid import files are ignored to keep startup resilient.
 
