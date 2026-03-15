@@ -1,47 +1,58 @@
 {
   "automations": [
     {
-      "alias": "tomatoflow:month:last-folder",
+      "alias": "Conclude Last Month Folder ( tomatoflow)",
+      "categoryPath": ["accountant", "Monthly"],
       "command": "& ../tomatoflow/organization/Get-LastMonth.ps1 -Values @('jan-2026','_feb-2026','mar-2025') -SkipInvalid"
     },
     {
-      "alias": "tomatoflow:month:ensure-next",
+      "alias": "Ensure New Month Folder (tomatoflow)",
+      "categoryPath": ["accountant"],
       "command": "& ../tomatoflow/organization/Ensure-NewMonthFolder.ps1 -Path 'path/to/entity/reports'"
     },
     {
-      "alias": "tomatoflow:month:init-report-pack",
+      "alias": "Initialize Monthly Report Pack (tomatoflow)",
+      "categoryPath": ["accountant", "Monthly"],
       "command": "& ../tomatoflow/organization/Create-MonthlyReport.ps1 -Path 'path/to/entity/reports'"
     },
     {
-      "alias": "tomatoflow:files:label",
+      "alias": "Label Files (tomatoflow)",
+      "categoryPath": ["accountant"],
       "command": "& ../tomatoflow/organization/Label-Files.ps1 -Path 'path/to/entity/reports/_current-month' -Labels INVOICE,EXPENSE,BALANCE"
     },
     {
-      "alias": "tomatoflow:files:archive-by-label",
+      "alias": "Archive Files By Label (tomatoflow)",
+      "categoryPath": ["accountant", "Monthly"],
       "command": "& ../tomatoflow/organization/Archive-FilesByLabel.ps1 -Path 'path/to/entity/reports/_current-month' -ArchiveExtension zip"
     },
     {
-      "alias": "tomatoflow:files:copy-to-delivery",
+      "alias": "Copy Files To Delivery (tomatoflow)",
+      "categoryPath": ["clientA"],
       "command": "& ../tomatoflow/organization/Copy-ToMonthFolder.ps1 -SourcePath 'path/to/entity/reports/_current-month' -DestinationPath 'path/to/entity/delivery/_current-month'"
     },
     {
-      "alias": "tomatoflow:draft:accounting-handoff (placeholder)",
+      "alias": "Draft Accounting Handoff (placeholder)",
+      "categoryPath": ["accountant"],
       "command": "Write-Host 'Placeholder: generate draft handoff email with attachments for accounting party.' -ForegroundColor Yellow"
     },
     {
-      "alias": "tomatoflow:draft:client-delivery (placeholder)",
+      "alias": "Draft Client Delivery (placeholder)",
+      "categoryPath": ["clientB"],
       "command": "Write-Host 'Placeholder: generate draft delivery email for client party with selected docs.' -ForegroundColor Yellow"
     },
     {
-      "alias": "tomatoflow:month:close-selected (placeholder)",
+      "alias": "Close Selected Month (placeholder)",
+      "categoryPath": ["accountant", "Monthly"],
       "command": "Write-Host 'Placeholder: interactive close flow (remove _ prefix for selected month folders).' -ForegroundColor Yellow"
     },
     {
-      "alias": "tomatoflow:year:rollup-if-complete (placeholder)",
+      "alias": "Rollup Year If Complete (placeholder)",
+      "categoryPath": ["accountant", "Monthly"],
       "command": "Write-Host 'Placeholder: when all months for a year are finalized, move them under year folder.' -ForegroundColor Yellow"
     },
     {
       "alias": "Mailer - Draft From JSON",
+      "categoryPath": ["Personal"],
       "command": "& ./automations/Create-MailerDraft.ps1 '../resources/mailer-sample.json'"
     }
   ]

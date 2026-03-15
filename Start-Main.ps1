@@ -182,6 +182,74 @@ function Select-FromList {
     }
 }
 
+function New-AutomationFolderNode {
+    param([Parameter(Mandatory = $true)][string]$Name)
+
+    return [pscustomobject]@{
+        Name        = $Name
+        Folders     = @{}
+        Automations = @()
+    }
+}
+
+function New-AutomationTree {
+    param(
+        [Parameter(Mandatory = $true)][AllowNull()][AllowEmptyCollection()][object[]]$Automations
+    )
+
+    $root = New-AutomationFolderNode -Name '/'
+
+    foreach ($automation in @($Automations)) {
+        if ($null -eq $automation) { continue }
+
+        $pathSegments = @()
+        if ($automation.PSObject.Properties.Name -contains 'CategoryPath' -and $null -ne $automation.CategoryPath) {
+            $pathSegments = @($automation.CategoryPath)
+        }
+
+        $current = $root
+        foreach ($segment in $pathSegments) {
+            $segmentName = ([string]$segment ?? '').Trim()
+            if (-not $segmentName) { continue }
+
+            if (-not $current.Folders.ContainsKey($segmentName)) {
+                $current.Folders[$segmentName] = New-AutomationFolderNode -Name $segmentName
+            }
+
+            $current = $current.Folders[$segmentName]
+        }
+
+        $current.Automations += $automation
+    }
+
+    return $root
+}
+
+function Get-AutomationWorkingDirectory {
+    param([Parameter(Mandatory = $true)][object]$Automation)
+
+    $workingDirectory = $baseRoot
+    if ($Automation.PSObject.Properties.Name -contains 'Source' -and $Automation.Source) {
+        try {
+            $workingDirectory = Split-Path -Parent ([string]$Automation.Source)
+        } catch {
+            $workingDirectory = $baseRoot
+        }
+    }
+
+    return $workingDirectory
+}
+
+function Remove-LastItem {
+    param([Parameter()][object[]]$Items)
+
+    if (-not $Items -or $Items.Count -le 1) {
+        return @()
+    }
+
+    return @($Items[0..($Items.Count - 2)])
+}
+
 function Browse-Clients {
     $clients = Resolve-Clients -Config $Config
 
@@ -246,36 +314,123 @@ function Run-Automation {
 
 
 function Automations-Menu {
+    $automations = @(Get-Automations -AppRoot $baseRoot)
+    if (-not $automations -or $automations.Count -eq 0) {
+        Clear-Host
+        Write-Heading 'Automations'
+        Write-Warn 'No automations found.'
+        $paths = Get-AutomationConfigPaths -AppRoot $baseRoot
+        Write-Info 'Expected config files:'
+        Write-Info "- $($paths.Public)"
+        Write-Host ''
+        Read-Host 'Press Enter to go back'
+        return
+    }
+
+    $rootNode = New-AutomationTree -Automations $automations
+    $currentNode = $rootNode
+    $parentStack = @()
+    $breadcrumb = @()
+
     while ($true) {
         Clear-Host
         Write-Heading 'Automations'
-        Write-Info 'Available automations.'
+
+        if ($breadcrumb.Count -gt 0) {
+            Write-Info ("Location: /{0}" -f ($breadcrumb -join '/'))
+        } else {
+            Write-Info 'Location: /'
+        }
         Write-Host ''
 
-        $automations = @(Get-Automations -AppRoot $baseRoot)
-        if (-not $automations -or $automations.Count -eq 0) {
-            Write-Warn 'No automations found.'
-            $paths = Get-AutomationConfigPaths -AppRoot $baseRoot
-            Write-Info "Expected config files:"
-            Write-Info "- $($paths.Public)"
-            Write-Host ''
-            Read-Host 'Press Enter to go back'
-            return
-        }
+        $menuItems = @()
 
-        $automation = Select-FromList -Title 'Select automation' -Items $automations -ItemLabel 'automations' -AllowQuit
-        if ($null -eq $automation -or -not $automation.Command) { return }
-
-        $workingDirectory = $baseRoot
-        if ($automation.PSObject.Properties.Name -contains 'Source' -and $automation.Source) {
-            try {
-                $workingDirectory = Split-Path -Parent ([string]$automation.Source)
-            } catch {
-                $workingDirectory = $baseRoot
+        $folderNames = @($currentNode.Folders.Keys | Sort-Object)
+        foreach ($folderName in $folderNames) {
+            $menuItems += [pscustomobject]@{
+                Type  = 'Folder'
+                Label = $folderName
+                Node  = $currentNode.Folders[$folderName]
             }
         }
 
-        Run-Automation -Alias $automation.Alias -Command $automation.Command -WorkingDirectory $workingDirectory
+        $automationItems = @($currentNode.Automations | Sort-Object Name)
+        foreach ($automation in $automationItems) {
+            $menuItems += [pscustomobject]@{
+                Type       = 'Automation'
+                Label      = $automation.Name
+                Automation = $automation
+            }
+        }
+
+        if ($menuItems.Count -eq 0) {
+            Write-Warn 'This folder has no entries.'
+        } else {
+            for ($i = 0; $i -lt $menuItems.Count; $i++) {
+                $idx = $i + 1
+                $item = $menuItems[$i]
+
+                if ($item.Type -eq 'Folder') {
+                    Write-Host ("[{0}] + {1}/" -f $idx, $item.Label) -ForegroundColor Gray
+                } else {
+                    Write-Host ("[{0}] - {1}" -f $idx, $item.Label) -ForegroundColor Gray
+                }
+            }
+        }
+
+        Write-Host ''
+        if ($breadcrumb.Count -gt 0) {
+            Write-Info "Type a number, 'b' for back, or 'h' for home."
+        } else {
+            Write-Info "Type a number, 'b' to return to the main menu, or 'h' for home."
+        }
+
+        $raw = Read-Host 'Select'
+        if ($null -eq $raw) { continue }
+        $raw = $raw.Trim()
+
+        if ($raw.Equals('b', [System.StringComparison]::OrdinalIgnoreCase)) {
+            if ($breadcrumb.Count -eq 0) {
+                return
+            }
+
+            $currentNode = $parentStack[$parentStack.Count - 1]
+            $parentStack = Remove-LastItem -Items $parentStack
+            $breadcrumb = Remove-LastItem -Items $breadcrumb
+            continue
+        }
+
+        if ($raw.Equals('h', [System.StringComparison]::OrdinalIgnoreCase)) {
+            $currentNode = $rootNode
+            $parentStack = @()
+            $breadcrumb = @()
+            continue
+        }
+
+        $n = 0
+        if (-not [int]::TryParse($raw, [ref]$n) -or $n -lt 1 -or $n -gt $menuItems.Count) {
+            Write-Warn 'Invalid selection.'
+            Start-Sleep -Milliseconds 700
+            continue
+        }
+
+        $selected = $menuItems[$n - 1]
+        if ($selected.Type -eq 'Folder') {
+            $parentStack += $currentNode
+            $currentNode = $selected.Node
+            $breadcrumb += $selected.Label
+            continue
+        }
+
+        $selectedAutomation = $selected.Automation
+        if ($null -eq $selectedAutomation -or -not $selectedAutomation.Command) {
+            Write-Warn 'Invalid automation entry.'
+            Start-Sleep -Milliseconds 700
+            continue
+        }
+
+        $workingDirectory = Get-AutomationWorkingDirectory -Automation $selectedAutomation
+        Run-Automation -Alias $selectedAutomation.Alias -Command $selectedAutomation.Command -WorkingDirectory $workingDirectory
     }
 }
 
@@ -305,13 +460,21 @@ function Show-Settings {
 
     Write-Host ''
     $automationConfigPaths = Get-AutomationConfigPaths -AppRoot $baseRoot
-    Write-Info "Automation config: $($automationConfigPaths.Public)"
+    Write-Info "Automation config (active): $($automationConfigPaths.Public)"
+    Write-Info "Automation config (preferred): $($automationConfigPaths.Preferred)"
 
     $automationCount = (Get-Automations -AppRoot $baseRoot).Count
     Write-Info "Configured automations: $automationCount"
 
     Write-Host ''
-    Write-Info "Parties config: $(Join-Path $PSScriptRoot 'conf/parties.json')"
+    $partiesConfigPath = Join-Path $PSScriptRoot 'conf/parties.json'
+    Write-Info "Parties config: $partiesConfigPath"
+
+    Write-Host ''
+    Write-Info 'Environment variables:'
+    Write-Info "- TOMATO_ROOT: $($env:TOMATO_ROOT)"
+    Write-Info "- BASE_DIR: $($env:BASE_DIR)"
+    Write-Info "- UTILS_ROOT: $($env:UTILS_ROOT)"
     Write-Host ''
     Read-Host 'Press Enter to go back'
 }
@@ -332,26 +495,19 @@ while ($true) {
     Write-Host ''
 
     Write-Host '[1] Automations' -ForegroundColor Gray
-    Write-Host '[2] Browse clients (navigation preview)' -ForegroundColor Gray
-    Write-Host '[3] Browse accountants (navigation preview)' -ForegroundColor Gray
-    Write-Host '[4] Settings' -ForegroundColor Gray
-    Write-Host '[q] Quit' -ForegroundColor Gray
+    Write-Host '[2] Settings' -ForegroundColor Gray
+    Write-Host '[3] Quit' -ForegroundColor Gray
 
     Write-Host ''
     $choice = Read-Host 'Select'
     if ($null -eq $choice) { continue }
     $choice = $choice.Trim()
 
-    if ($choice.Equals('q', [System.StringComparison]::OrdinalIgnoreCase)) {
-        break
-    }
-
     try {
         switch ($choice) {
             '1' { Automations-Menu }
-            '2' { Browse-Clients }
-            '3' { Preview-Accountant }
-            '4' { Show-Settings }
+            '2' { Show-Settings }
+            '3' { Request-Quit }
             default { Write-Warn 'Invalid selection.'; Start-Sleep -Milliseconds 700 }
         }
     } catch {

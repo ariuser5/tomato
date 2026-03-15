@@ -140,11 +140,32 @@ function Read-AutomationEntriesFromFile {
             $command = ([string]$entry.command ?? '').Trim()
             if (-not $alias -or -not $command) { continue }
 
+            $hasCategoryPath = $entry.PSObject.Properties.Name -contains 'categoryPath'
+            if (-not $hasCategoryPath) {
+                Write-Warning "Skipping automation '$alias' in '$resolvedPath': missing required categoryPath array."
+                continue
+            }
+
+            $categoryPathValue = $entry.categoryPath
+            if (-not ($categoryPathValue -is [array])) {
+                Write-Warning "Skipping automation '$alias' in '$resolvedPath': categoryPath must be an array of strings."
+                continue
+            }
+
+            $categoryPath = @()
+            foreach ($segment in @($categoryPathValue)) {
+                if ($null -eq $segment) { continue }
+                $segmentText = ([string]$segment).Trim()
+                if (-not $segmentText) { continue }
+                $categoryPath += $segmentText
+            }
+
             $result += [pscustomobject]@{
-                Name    = $alias
-                Alias   = $alias
-                Command = $command
-                Source  = $resolvedPath
+                Name         = $alias
+                Alias        = $alias
+                Command      = $command
+                CategoryPath = @($categoryPath)
+                Source       = $resolvedPath
             }
         }
 
