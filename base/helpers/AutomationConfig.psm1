@@ -229,33 +229,32 @@ function Invoke-AutomationCommand {
         }
     }
 
-    $escapedAppRoot = $AppRoot -replace "'", "''"
-    $escapedWorkingDirectory = $effectiveWorkingDirectory -replace "'", "''"
-    $composedCommand = @(
-        "`$ErrorActionPreference = 'Stop'"
-        "`$PSScriptRoot = '$escapedAppRoot'"
-        "Set-Location -LiteralPath '$escapedWorkingDirectory'"
-        $Command
-    ) -join "; "
+    $previousLocation = Get-Location
+    $previousLastExitCode = $global:LASTEXITCODE
 
-    & pwsh -NoProfile -ExecutionPolicy Bypass -Command $composedCommand 2>&1 |
-        ForEach-Object {
-            if ($_ -is [System.Management.Automation.ErrorRecord]) {
-                Write-Host $_.ToString() -ForegroundColor Red
-            } else {
-                $_ | Out-Host
-            }
+    try {
+        Set-Location -LiteralPath $effectiveWorkingDirectory
+        $global:LASTEXITCODE = $null
+
+        # Execute in-process so interactive scripts can use the active console host.
+        Invoke-Expression $Command
+
+        if ($null -ne $LASTEXITCODE) {
+            return $LASTEXITCODE
         }
 
-    if ($null -ne $LASTEXITCODE) {
-        return $LASTEXITCODE
-    }
+        if ($?) {
+            return 0
+        }
 
-    if ($?) {
-        return 0
+        return 1
+    } catch {
+        Write-Host $_.Exception.Message -ForegroundColor Red
+        return 1
+    } finally {
+        Set-Location -LiteralPath $previousLocation
+        $global:LASTEXITCODE = $previousLastExitCode
     }
-
-    return 1
 }
 
 Export-ModuleMember -Function Get-AutomationConfigPaths, Get-Automations, Invoke-AutomationCommand

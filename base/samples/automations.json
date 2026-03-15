@@ -1,6 +1,11 @@
 {
   "automations": [
     {
+      "alias": "Preview Location",
+      "categoryPath": [],
+      "command": "& ../tomatoflow/automations/Preview-Location.ps1"
+    },
+    {
       "alias": "Conclude Last Month Folder ( tomatoflow)",
       "categoryPath": ["accountant", "Monthly"],
       "command": "& ../tomatoflow/organization/Get-LastMonth.ps1 -Values @('jan-2026','_feb-2026','mar-2025') -SkipInvalid"
