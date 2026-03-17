@@ -99,6 +99,7 @@ Recommended commit message:
 - Supports `import.path` so projects can compose local/custom overlays.
 - Relative import paths resolve from the JSON file that declares the import.
 - Missing or invalid import files are ignored to keep startup resilient.
+- By default it also imports `%LOCALAPPDATA%/tomato/tomatoflow-meta.json` for user-local tomatoflow runtime entries.
 
 ### Editor selection for todo-style flows
 - Editor resolution order:

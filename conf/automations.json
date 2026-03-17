@@ -2,7 +2,12 @@
   "automations": [
     {
       "import": {
-        "path": "../base/samples/automations.json"
+        "path": "../base/tomatoflow/automations.json"
+      }
+    },
+    {
+      "import": {
+        "path": "$env:LOCALAPPDATA/tomato/tomatoflow-meta.json"
       }
     }
   ]

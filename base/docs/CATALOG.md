@@ -72,6 +72,25 @@ This catalog is the single reference for what the base layer provides and how to
 
 Tomatoflow is an opinionated workflow package that builds on the generic utilities.
 
+Setup model:
+- Base automations expose setup actions under `tomatoflow-setup`.
+- Setup writes flow-specific runtime command entries in the local metadata file `%LOCALAPPDATA%/tomato/tomatoflow-meta.json`.
+- Configured flows are exposed as top-level automation folders (same level as `tomatoflow-setup`).
+- Root config imports that local file, so each user can provision flows without modifying repo files.
+
+### Setup and runtime automations
+- File: tomatoflow/configure/Initialize-Tomatoflow.ps1
+- Purpose: creates or updates one flow definition in local tomatoflow metadata.
+
+- File: tomatoflow/configure/List-Tomatoflows.ps1
+- Purpose: lists flows currently configured in local tomatoflow metadata.
+
+- File: tomatoflow/configure/Remove-Tomatoflow.ps1
+- Purpose: removes one flow definition (and its managed command entries) from local metadata.
+
+- File: tomatoflow/automations/Run-MonthlyFlow.ps1
+- Purpose: runs the unified monthly flow for a configured storage path.
+
 ### Orchestration scripts
 - File: tomatoflow/organization/Ensure-NewMonthFolder.ps1
 - Purpose: creates the next missing month folder based on existing month folders.
@@ -82,6 +101,11 @@ Tomatoflow is an opinionated workflow package that builds on the generic utiliti
 - Purpose: creates next month folder and copies template files.
 - Typical usage:
   - pwsh -NoProfile -File ./tomatoflow/organization/Create-MonthlyReport.ps1 -Path "gdrive:parties/entity/rapoarte"
+
+- File: tomatoflow/organization/Conclude-PreviousMonthFolder.ps1
+- Purpose: removes underscore prefix from the previous open month folder while keeping current month open.
+- Typical usage:
+  - pwsh -NoProfile -File ./tomatoflow/organization/Conclude-PreviousMonthFolder.ps1 -Path "gdrive:parties/entity/rapoarte"
 
 - File: tomatoflow/organization/Label-Files.ps1
 - Purpose: labels files (for example INVOICE/EXPENSE/BALANCE) for later grouping.
@@ -113,11 +137,9 @@ Tomatoflow is an opinionated workflow package that builds on the generic utiliti
 - File: tomatoflow/organization/modules/DriveUtils.psm1
 - Purpose: Drive metadata helpers and browser URL generation.
 
-## Samples
-
-### Sample automations menu
-- File: samples/automations.json
-- Purpose: demonstrates a Tomatoflow-style automation menu including placeholders for not-yet-implemented steps.
+### Tomatoflow automations menu
+- File: tomatoflow/automations.json
+- Purpose: exposes setup-first automations; flow-specific command entries are provisioned locally at runtime.
 
 ## Maintenance rule
 

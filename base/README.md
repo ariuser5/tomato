@@ -12,7 +12,6 @@ This folder contains the reusable base layer that extender repositories build on
 - `gdrive/`: Google Drive oriented helper scripts.
 - `gmail/`: Gmail helper scripts.
 - `resources/`: shared assets and templates used by automations.
-- `samples/`: sample config and sample automation entries.
 - `utils/`: generic workflow-agnostic utilities.
 - `tomatoflow/`: recommended workflow implementation package.
 
@@ -26,8 +25,17 @@ It is intentionally generic and party-oriented:
 - supports recurring period-based operations and handoff preparation.
 
 Tomatoflow package layout:
+- `tomatoflow/automations.json`: default tomatoflow automation entries.
+- `tomatoflow/configure/`: setup and configuration management scripts.
 - `tomatoflow/organization/`: orchestration scripts.
 - `tomatoflow/organization/modules/`: reusable Tomatoflow-specific modules.
+
+Tomatoflow runtime model:
+- Fresh clone shows only setup automations under `tomatoflow-setup`.
+- Setup automation writes per-user flow metadata file to `%LOCALAPPDATA%/tomato/tomatoflow-meta.json`.
+- Configured flow folders are shown at top-level, alongside `tomatoflow-setup`.
+- Flow command entries from that local file are imported at runtime.
+- This keeps base repository defaults clean while enabling local flow provisioning.
 
 ## Capability catalog
 

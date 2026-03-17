@@ -1,0 +1,19 @@
+{
+  "automations": [
+    {
+      "alias": "Initialize Flow",
+      "categoryPath": ["tomatoflow-setup"],
+      "command": "& ./configure/Initialize-Tomatoflow.ps1"
+    },
+    {
+      "alias": "List Configured Flows",
+      "categoryPath": ["tomatoflow-setup"],
+      "command": "& ./configure/List-Tomatoflows.ps1"
+    },
+    {
+      "alias": "Remove Flow",
+      "categoryPath": ["tomatoflow-setup"],
+      "command": "& ./configure/Remove-Tomatoflow.ps1"
+    }
+  ]
+}
