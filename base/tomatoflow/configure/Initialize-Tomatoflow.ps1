@@ -87,38 +87,45 @@ function New-FlowAutomations {
     # Flow folders are top-level peers of "tomatoflow-setup" in the automation menu.
     $flowCategory = @($Name)
 
-    $runFlowCommand = "& `"$env:BASE_DIR/tomatoflow/automations/Run-MonthlyFlow.ps1`" -FlowName '$escapedName' -Path '$escapedPath' -PathType '$Type'"
-    $previewCommand = "& `"$env:BASE_DIR/tomatoflow/automations/Preview-Location.ps1`" -Root '$escapedPath'"
-    $ensureCommand = "& `"$env:BASE_DIR/tomatoflow/organization/Ensure-NewMonthFolder.ps1`" -Path '$escapedPath' -PathType '$Type'"
+    $runFlowCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/Run-MonthlyFlow.ps1`" -FlowName '$escapedName' -Path '$escapedPath' -PathType '$Type'"
+    $previewCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/Preview-Location.ps1`" -Root '$escapedPath'"
+    $ensureCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/organization/Ensure-NewMonthFolder.ps1`" -Path '$escapedPath' -PathType '$Type'"
 
     return @(
         [pscustomobject]@{
             alias = 'Run Monthly Flow'
             categoryPath = $flowCategory
             command = $runFlowCommand
-            managedBy = 'tomatoflow-configure'
-            flowName = $Name
-            storagePath = $Path
-            pathType = $Type
         },
         [pscustomobject]@{
             alias = 'Preview Storage'
             categoryPath = $flowCategory
             command = $previewCommand
-            managedBy = 'tomatoflow-configure'
-            flowName = $Name
-            storagePath = $Path
-            pathType = $Type
         },
         [pscustomobject]@{
             alias = 'Ensure New Month Folder'
             categoryPath = $flowCategory
             command = $ensureCommand
-            managedBy = 'tomatoflow-configure'
-            flowName = $Name
-            storagePath = $Path
-            pathType = $Type
         }
+    )
+}
+
+function Get-CategoryPathSegments {
+    param([Parameter(Mandatory = $true)][object]$Entry)
+
+    if (-not ($Entry.PSObject.Properties.Name -contains 'categoryPath')) {
+        return @()
+    }
+
+    $value = $Entry.categoryPath
+    if (-not ($value -is [array])) {
+        return @()
+    }
+
+    return @(
+        @($value) |
+            ForEach-Object { ([string]$_).Trim() } |
+            Where-Object { $_ }
     )
 }
 
@@ -141,18 +148,19 @@ if (-not $resolvedStoragePath) {
 $metadataFilePath = Get-MetadataFilePath
 $metadataConfig = Read-MetadataConfig -Path $metadataFilePath
 $existingAutomations = @($metadataConfig.automations)
+$managedAliases = @('Run Monthly Flow', 'Preview Storage', 'Ensure New Month Folder')
 
 $filtered = @()
 foreach ($entry in $existingAutomations) {
     if ($null -eq $entry) { continue }
 
-    $isManaged = (
-        (($entry.PSObject.Properties.Name -contains 'managedBy') -and (("$($entry.managedBy)" -eq 'tomatoflow-configure') -or ("$($entry.managedBy)" -eq 'tomatoflow-setup'))) -or
-        (($entry.PSObject.Properties.Name -contains 'generatedBy') -and ("$($entry.generatedBy)" -eq 'tomatoflow-setup'))
-    )
-    $isSameFlow = ($entry.PSObject.Properties.Name -contains 'flowName') -and ("$($entry.flowName)" -eq $resolvedFlowName)
+    $categoryPath = @(Get-CategoryPathSegments -Entry $entry)
+    $entryFlowName = if ($categoryPath.Count -gt 0) { $categoryPath[0] } else { '' }
+    $alias = if ($entry.PSObject.Properties.Name -contains 'alias') { ([string]$entry.alias).Trim() } else { '' }
+    $isManagedFlowEntry = ($entryFlowName -and ($entryFlowName -ne 'tomatoflow-setup') -and ($managedAliases -contains $alias))
+    $isSameFlow = ($entryFlowName -eq $resolvedFlowName)
 
-    if ($isManaged -and $isSameFlow) {
+    if ($isManagedFlowEntry -and $isSameFlow) {
         continue
     }
 

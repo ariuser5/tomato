@@ -42,18 +42,38 @@ elseif ($parsed.PSObject.Properties.Name -contains 'automations') {
     $entries = @($parsed.automations)
 }
 
+function Get-CategoryPathSegments {
+    param([Parameter(Mandatory = $true)][object]$Entry)
+
+    if (-not ($Entry.PSObject.Properties.Name -contains 'categoryPath')) {
+        return @()
+    }
+
+    $value = $Entry.categoryPath
+    if (-not ($value -is [array])) {
+        return @()
+    }
+
+    return @(
+        @($value) |
+            ForEach-Object { ([string]$_).Trim() } |
+            Where-Object { $_ }
+    )
+}
+
 $kept = @()
 $removedCount = 0
+$managedAliases = @('Run Monthly Flow', 'Preview Storage', 'Ensure New Month Folder')
 foreach ($entry in $entries) {
     if ($null -eq $entry) { continue }
 
-    $isManaged = (
-        (($entry.PSObject.Properties.Name -contains 'managedBy') -and (("$($entry.managedBy)" -eq 'tomatoflow-configure') -or ("$($entry.managedBy)" -eq 'tomatoflow-setup'))) -or
-        (($entry.PSObject.Properties.Name -contains 'generatedBy') -and ("$($entry.generatedBy)" -eq 'tomatoflow-setup'))
-    )
-    $isSameFlow = ($entry.PSObject.Properties.Name -contains 'flowName') -and ("$($entry.flowName)" -eq $resolvedFlowName)
+    $categoryPath = @(Get-CategoryPathSegments -Entry $entry)
+    $entryFlowName = if ($categoryPath.Count -gt 0) { $categoryPath[0] } else { '' }
+    $alias = if ($entry.PSObject.Properties.Name -contains 'alias') { ([string]$entry.alias).Trim() } else { '' }
+    $isManagedFlowEntry = ($entryFlowName -and ($entryFlowName -ne 'tomatoflow-setup') -and ($managedAliases -contains $alias))
+    $isSameFlow = ($entryFlowName -eq $resolvedFlowName)
 
-    if ($isManaged -and $isSameFlow) {
+    if ($isManagedFlowEntry -and $isSameFlow) {
         $removedCount++
         continue
     }

@@ -47,28 +47,57 @@ elseif ($parsed.PSObject.Properties.Name -contains 'automations') {
     $entries = @($parsed.automations)
 }
 
+function Get-CategoryPathSegments {
+    param([Parameter(Mandatory = $true)][object]$Entry)
+
+    if (-not ($Entry.PSObject.Properties.Name -contains 'categoryPath')) {
+        return @()
+    }
+
+    $value = $Entry.categoryPath
+    if (-not ($value -is [array])) {
+        return @()
+    }
+
+    return @(
+        @($value) |
+            ForEach-Object { ([string]$_).Trim() } |
+            Where-Object { $_ }
+    )
+}
+
+function Parse-StoragePathFromCommand {
+    param([Parameter(Mandatory = $true)][string]$Command)
+
+    $trimmed = $Command.Trim()
+    if ($trimmed -match "-Path\s+'((?:''|[^'])*)'") {
+        return $Matches[1].Replace("''", "'")
+    }
+
+    if ($trimmed -match "-Root\s+'((?:''|[^'])*)'") {
+        return $Matches[1].Replace("''", "'")
+    }
+
+    return ''
+}
+
 $flowMap = @{}
+$managedAliases = @('Run Monthly Flow', 'Preview Storage', 'Ensure New Month Folder')
 foreach ($entry in $entries) {
     if ($null -eq $entry) { continue }
 
-    $isManaged = (
-        (($entry.PSObject.Properties.Name -contains 'managedBy') -and (("$($entry.managedBy)" -eq 'tomatoflow-configure') -or ("$($entry.managedBy)" -eq 'tomatoflow-setup'))) -or
-        (($entry.PSObject.Properties.Name -contains 'generatedBy') -and ("$($entry.generatedBy)" -eq 'tomatoflow-setup'))
-    )
-    if (-not $isManaged) { continue }
+    $categoryPath = @(Get-CategoryPathSegments -Entry $entry)
+    $flowName = if ($categoryPath.Count -gt 0) { $categoryPath[0] } else { '' }
+    $alias = if ($entry.PSObject.Properties.Name -contains 'alias') { ([string]$entry.alias).Trim() } else { '' }
+    $isManagedFlowEntry = ($flowName -and ($flowName -ne 'tomatoflow-setup') -and ($managedAliases -contains $alias))
 
-    $flowName = ''
-    if ($entry.PSObject.Properties.Name -contains 'flowName') {
-        $flowName = ("$($entry.flowName)").Trim()
-    }
+    if (-not $isManagedFlowEntry) { continue }
 
     if (-not $flowName) { continue }
 
     if (-not $flowMap.ContainsKey($flowName)) {
-        $storagePath = ''
-        if ($entry.PSObject.Properties.Name -contains 'storagePath') {
-            $storagePath = "$($entry.storagePath)"
-        }
+        $commandValue = if ($entry.PSObject.Properties.Name -contains 'command') { ([string]$entry.command) } else { '' }
+        $storagePath = Parse-StoragePathFromCommand -Command $commandValue
 
         $flowMap[$flowName] = [pscustomobject]@{
             Name = $flowName
