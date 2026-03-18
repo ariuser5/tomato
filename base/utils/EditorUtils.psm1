@@ -5,7 +5,7 @@ EditorUtils.psm1
 Shared editor launch + wait helpers (git-rebase-like flows).
 
 Editor selection precedence:
-    1) TOMATO_EDITOR
+  1) TOMATO_EDITOR
   2) VISUAL
   3) EDITOR
   4) notepad.exe (fallback)

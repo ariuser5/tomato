@@ -28,6 +28,11 @@ This catalog is the single reference for what the base layer provides and how to
   - Get-Automations
   - Invoke-AutomationCommand
 
+### helpers/SettingsView.psm1
+- Purpose: renders the Settings view used by the interactive main entrypoint.
+- Key exports:
+  - Show-SettingsView
+
 ## Generic utilities (utils)
 
 ### Path and directory abstraction
@@ -62,6 +67,9 @@ This catalog is the single reference for what the base layer provides and how to
 - Purpose: editor selection and blocking wait behavior.
 - Key exports:
   - Invoke-Editor
+
+- File: utils/Select-ViewOption.ps1
+- Purpose: generic view option selector that returns raw user selection based on consumer-defined prompt guidance.
 
 - File: utils/Preview-Location.ps1
 - Purpose: read-only folder navigation/preview for local and remote paths.

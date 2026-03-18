@@ -34,6 +34,14 @@ if (-not (Test-Path -LiteralPath $baseRoot -PathType Container)) {
 $automationConfigModule = Join-Path $baseRoot '.\helpers\AutomationConfig.psm1'
 Import-Module $automationConfigModule -Force
 
+$settingsViewModule = Join-Path $baseRoot '.\helpers\SettingsView.psm1'
+Import-Module $settingsViewModule -Force
+
+$viewOptionSelectorScript = Join-Path $baseRoot '.\utils\Select-ViewOption.ps1'
+if (-not (Test-Path -LiteralPath $viewOptionSelectorScript -PathType Leaf)) {
+    throw "Missing required view option selector: $viewOptionSelectorScript"
+}
+
 function Write-Heading {
     param([Parameter(Mandatory = $true)][string]$Text)
     Write-Host $Text -ForegroundColor Cyan
@@ -74,6 +82,24 @@ function Wait-ForKeyPress {
     } else {
         Read-Host 'Press Enter to continue' | Out-Null
     }
+}
+
+function Request-ViewSelection {
+    param(
+        [Parameter(Mandatory = $true)][string[]]$Items,
+        [Parameter(Mandatory = $true)][string]$Prompt
+    )
+
+    $result = & $viewOptionSelectorScript -Items $Items -RenderStyle Numbered -Prompt $Prompt -LoopUntilNonEmpty:$true -TrimSelection
+    if ($null -eq $result) {
+        return ''
+    }
+
+    if ($result.PSObject.Properties.Name -contains 'Selection') {
+        return ([string]$result.Selection ?? '').Trim()
+    }
+
+    return ''
 }
 
 
@@ -225,27 +251,33 @@ function Automations-Menu {
 
         if ($menuItems.Count -eq 0) {
             Write-Warn 'This folder has no entries.'
-        } else {
-            for ($i = 0; $i -lt $menuItems.Count; $i++) {
-                $idx = $i + 1
-                $item = $menuItems[$i]
-
-                if ($item.Type -eq 'Folder') {
-                    Write-Host ("[{0}] + {1}/" -f $idx, $item.Label) -ForegroundColor Gray
-                } else {
-                    Write-Host ("[{0}] - {1}" -f $idx, $item.Label) -ForegroundColor Gray
-                }
-            }
         }
 
         Write-Host ''
+        $selectionPrompt = ''
         if ($breadcrumb.Count -gt 0) {
-            Write-Info "Type a number, 'b' for back, or 'h' for home."
+            $selectionPrompt = "Type a number, 'b' for back, or 'h' for home"
         } else {
-            Write-Info "Type a number, 'b' to return to the main menu, or 'h' for home."
+            $selectionPrompt = "Type a number, 'b' to return to the main menu, or 'h' for home"
         }
 
-        $raw = Read-Host 'Select'
+        $raw = ''
+        if ($menuItems.Count -gt 0) {
+            $displayItems = @()
+            foreach ($item in $menuItems) {
+                if ($item.Type -eq 'Folder') {
+                    $displayItems += ("+ {0}/" -f $item.Label)
+                }
+                else {
+                    $displayItems += ("- {0}" -f $item.Label)
+                }
+            }
+
+            $raw = Request-ViewSelection -Items $displayItems -Prompt $selectionPrompt
+        }
+        else {
+            $raw = Read-Host $selectionPrompt
+        }
         if ($null -eq $raw) { continue }
         $raw = $raw.Trim()
 
@@ -294,27 +326,6 @@ function Automations-Menu {
     }
 }
 
-function Show-Settings {
-    Clear-Host
-    Write-Heading 'Settings'
-
-    Write-Host ''
-    $automationConfigPaths = Get-AutomationConfigPaths -AppRoot $baseRoot
-    Write-Info "Automation config (active): $($automationConfigPaths.Public)"
-    Write-Info "Automation config (preferred): $($automationConfigPaths.Preferred)"
-
-    $automationCount = (Get-Automations -AppRoot $baseRoot).Count
-    Write-Info "Configured automations: $automationCount"
-
-    Write-Host ''
-    Write-Info 'Environment variables:'
-    Write-Info "- TOMATO_ROOT: $($env:TOMATO_ROOT)"
-    Write-Info "- BASE_DIR: $($env:BASE_DIR)"
-    Write-Info "- UTILS_ROOT: $($env:UTILS_ROOT)"
-    Write-Host ''
-    Read-Host 'Press Enter to go back'
-}
-
 # -----------------------------------------------------------------------------
 # Main loop
 # -----------------------------------------------------------------------------
@@ -329,19 +340,19 @@ while ($true) {
     Write-Info 'Select a section.'
     Write-Host ''
 
-    Write-Host '[1] Automations' -ForegroundColor Gray
-    Write-Host '[2] Settings' -ForegroundColor Gray
-    Write-Host '[3] Quit' -ForegroundColor Gray
-
-    Write-Host ''
-    $choice = Read-Host 'Select'
+    $mainItems = @(
+        'Automations',
+        'Settings',
+        'Quit'
+    )
+    $choice = Request-ViewSelection -Items $mainItems -Prompt 'Select any option in the menu'
     if ($null -eq $choice) { continue }
     $choice = $choice.Trim()
 
     try {
         switch ($choice) {
             '1' { Automations-Menu }
-            '2' { Show-Settings }
+            '2' { Show-SettingsView -AppRoot $baseRoot }
             '3' { Request-Quit }
             default { Write-Warn 'Invalid selection.'; Start-Sleep -Milliseconds 700 }
         }
