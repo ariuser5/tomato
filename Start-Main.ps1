@@ -184,6 +184,36 @@ function Remove-LastItem {
     return @($Items[0..($Items.Count - 2)])
 }
 
+function Resolve-AutomationNavigation {
+    param(
+        [Parameter(Mandatory = $true)][object]$RootNode,
+        [Parameter()][AllowNull()][AllowEmptyCollection()][string[]]$Breadcrumb
+    )
+
+    $current = $RootNode
+    $parents = @()
+    $resolvedBreadcrumb = @()
+
+    foreach ($segment in @($Breadcrumb)) {
+        $segmentName = ([string]$segment ?? '').Trim()
+        if (-not $segmentName) { continue }
+
+        if (-not $current.Folders.ContainsKey($segmentName)) {
+            break
+        }
+
+        $parents += $current
+        $current = $current.Folders[$segmentName]
+        $resolvedBreadcrumb += $segmentName
+    }
+
+    return [pscustomobject]@{
+        CurrentNode = $current
+        ParentStack = $parents
+        Breadcrumb  = $resolvedBreadcrumb
+    }
+}
+
 function Run-Automation {
     param(
         [Parameter(Mandatory = $true)][string]$Alias,
@@ -213,25 +243,28 @@ function Run-Automation {
 
 
 function Automations-Menu {
-    $automations = @(Get-Automations -AppRoot $baseRoot)
-    if (-not $automations -or $automations.Count -eq 0) {
-        Clear-Host
-        Write-Heading 'Automations'
-        Write-Warn 'No automations found.'
-        $paths = Get-AutomationConfigPaths -AppRoot $baseRoot
-        Write-Info 'Expected config files:'
-        Write-Info "- $($paths.Public)"
-        Write-Host ''
-        Read-Host 'Press Enter to go back'
-        return
-    }
-
-    $rootNode = New-AutomationTree -Automations $automations
-    $currentNode = $rootNode
-    $parentStack = @()
     $breadcrumb = @()
 
     while ($true) {
+        $automations = @(Get-Automations -AppRoot $baseRoot)
+        if (-not $automations -or $automations.Count -eq 0) {
+            Clear-Host
+            Write-Heading 'Automations'
+            Write-Warn 'No automations found.'
+            $paths = Get-AutomationConfigPaths -AppRoot $baseRoot
+            Write-Info 'Expected config files:'
+            Write-Info "- $($paths.Public)"
+            Write-Host ''
+            Read-Host 'Press Enter to go back'
+            return
+        }
+
+        $rootNode = New-AutomationTree -Automations $automations
+        $resolvedNavigation = Resolve-AutomationNavigation -RootNode $rootNode -Breadcrumb $breadcrumb
+        $currentNode = $resolvedNavigation.CurrentNode
+        $parentStack = $resolvedNavigation.ParentStack
+        $breadcrumb = $resolvedNavigation.Breadcrumb
+
         Clear-Host
         Write-Heading 'Automations'
 
