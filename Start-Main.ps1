@@ -123,7 +123,7 @@ function New-AutomationFolderNode {
 
     return [pscustomobject]@{
         Name        = $Name
-        Folders     = @{}
+        Folders     = [ordered]@{}
         Automations = @()
     }
 }
@@ -148,7 +148,7 @@ function New-AutomationTree {
             $segmentName = ([string]$segment ?? '').Trim()
             if (-not $segmentName) { continue }
 
-            if (-not $current.Folders.ContainsKey($segmentName)) {
+            if (-not ($current.Folders.Keys -contains $segmentName)) {
                 $current.Folders[$segmentName] = New-AutomationFolderNode -Name $segmentName
             }
 
@@ -200,7 +200,7 @@ function Resolve-AutomationNavigation {
         $segmentName = ([string]$segment ?? '').Trim()
         if (-not $segmentName) { continue }
 
-        if (-not $current.Folders.ContainsKey($segmentName)) {
+        if (-not ($current.Folders.Keys -contains $segmentName)) {
             break
         }
 
@@ -279,7 +279,7 @@ function Automations-Menu {
 
         $menuItems = @()
 
-        $folderNames = @($currentNode.Folders.Keys | Sort-Object)
+        $folderNames = @($currentNode.Folders.Keys)
         foreach ($folderName in $folderNames) {
             $menuItems += [pscustomobject]@{
                 Type  = 'Folder'
@@ -288,7 +288,7 @@ function Automations-Menu {
             }
         }
 
-        $automationItems = @($currentNode.Automations | Sort-Object Name)
+        $automationItems = @($currentNode.Automations)
         foreach ($automation in $automationItems) {
             $menuItems += [pscustomobject]@{
                 Type       = 'Automation'
