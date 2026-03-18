@@ -76,12 +76,7 @@ function Request-Quit {
 function Wait-ForKeyPress {
     param([Parameter(Mandatory = $true)][string]$Prompt)
 
-    Write-Info $Prompt
-    if ($Host.UI -and $Host.UI.RawUI) {
-        [void]$Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
-    } else {
-        Read-Host 'Press Enter to continue' | Out-Null
-    }
+    Read-Host $Prompt | Out-Null
 }
 
 function Request-ViewSelection {
@@ -238,7 +233,7 @@ function Run-Automation {
     Write-Host ''
     Write-Info "Automation finished (exit code: $exitCode)"
     Write-Host ''
-    Wait-ForKeyPress -Prompt 'Press any key to continue'
+    Wait-ForKeyPress -Prompt 'Press Enter to continue'
 }
 
 
