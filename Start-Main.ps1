@@ -87,12 +87,25 @@ function Wait-ForKeyPress {
 function Request-ViewSelection {
     param(
         [Parameter(Mandatory = $true)][string[]]$Items,
-        [Parameter(Mandatory = $true)][string]$Prompt
+        [Parameter(Mandatory = $true)][string]$Prompt,
+        [Parameter()]
+        [ValidateSet('ClearInput', 'ExitView', 'GoBack')]
+        [string]$EscBehavior = 'ExitView'
     )
 
-    $result = & $viewOptionSelectorScript -Items $Items -RenderStyle Numbered -Prompt $Prompt -LoopUntilNonEmpty:$true -TrimSelection
+    $result = & $viewOptionSelectorScript -Items $Items -RenderStyle Numbered -Prompt $Prompt -LoopUntilNonEmpty:$true -TrimSelection -EscBehavior $EscBehavior
     if ($null -eq $result) {
         return ''
+    }
+
+    if ($result.PSObject.Properties.Name -contains 'Status') {
+        $status = ([string]$result.Status ?? '').Trim()
+        if ($status -eq 'GoBack') {
+            return 'b'
+        }
+        if ($status -eq 'Escaped') {
+            return ''
+        }
     }
 
     if ($result.PSObject.Properties.Name -contains 'Selection') {
@@ -273,7 +286,7 @@ function Automations-Menu {
                 }
             }
 
-            $raw = Request-ViewSelection -Items $displayItems -Prompt $selectionPrompt
+            $raw = Request-ViewSelection -Items $displayItems -Prompt $selectionPrompt -EscBehavior GoBack
         }
         else {
             $raw = Read-Host $selectionPrompt
@@ -345,9 +358,14 @@ while ($true) {
         'Settings',
         'Quit'
     )
-    $choice = Request-ViewSelection -Items $mainItems -Prompt 'Select any option in the menu'
+    $choice = Request-ViewSelection -Items $mainItems -Prompt 'Select any option in the menu' -EscBehavior ExitView
     if ($null -eq $choice) { continue }
     $choice = $choice.Trim()
+
+    if (-not $choice) {
+        Request-Quit
+        continue
+    }
 
     try {
         switch ($choice) {

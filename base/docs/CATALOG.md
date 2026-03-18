@@ -69,7 +69,7 @@ This catalog is the single reference for what the base layer provides and how to
   - Invoke-Editor
 
 - File: utils/Select-ViewOption.ps1
-- Purpose: generic view option selector that returns raw user selection based on consumer-defined prompt guidance.
+- Purpose: generic view option selector that returns raw user selection based on consumer-defined prompt guidance, with configurable ESC behavior (`ClearInput`, `ExitView`, `GoBack`).
 
 - File: utils/Preview-Location.ps1
 - Purpose: read-only folder navigation/preview for local and remote paths.

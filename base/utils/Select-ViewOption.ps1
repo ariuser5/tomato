@@ -12,6 +12,11 @@ Use this when you need to:
 The caller is responsible for interpreting the selected value and deciding what
 action to execute.
 
+ESC behavior is configurable via -EscBehavior:
+    - ClearInput: clear current prompt text and keep reading.
+    - ExitView: return Status='Escaped'.
+    - GoBack: return Status='GoBack'.
+
 Example:
   $items = @('Automations', 'Settings', 'Quit')
 
@@ -48,7 +53,11 @@ param(
 
     # Trim selection before returning.
     [Parameter()]
-    [switch]$TrimSelection
+    [switch]$TrimSelection,
+
+    [Parameter()]
+    [ValidateSet('ClearInput', 'ExitView', 'GoBack')]
+    [string]$EscBehavior = 'ExitView'
 )
 
 Set-StrictMode -Version Latest
@@ -56,6 +65,91 @@ $ErrorActionPreference = 'Stop'
 
 if (-not $Items -or $Items.Count -eq 0) {
     throw 'Items cannot be empty.'
+}
+
+function New-SelectionResult {
+    param(
+        [Parameter(Mandatory = $true)][string]$Status,
+        [Parameter()][string]$Selection = '',
+        [Parameter()][bool]$Selected = $false
+    )
+
+    return [pscustomobject]@{
+        Status = $Status
+        Selection = $Selection
+        Selected = $Selected
+    }
+}
+
+function Read-SelectionRaw {
+    param(
+        [Parameter(Mandatory = $true)][string]$PromptText,
+        [Parameter(Mandatory = $true)][string]$EscMode
+    )
+
+    # Fallback host: cannot detect ESC key directly.
+    if (-not $Host.UI -or -not $Host.UI.RawUI) {
+        $fallback = Read-Host $PromptText
+        return [pscustomobject]@{
+            Status = 'SelectedFallback'
+            Value = [string]$fallback
+        }
+    }
+
+    Write-Host ("{0}: " -f $PromptText) -NoNewline
+    $buffer = New-Object System.Text.StringBuilder
+
+    while ($true) {
+        $keyInfo = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
+        $virtualKey = if ($keyInfo.PSObject.Properties.Match('VirtualKeyCode').Count -gt 0) {
+            [int]$keyInfo.VirtualKeyCode
+        }
+        elseif ($keyInfo.PSObject.Properties.Match('Key').Count -gt 0) {
+            [int]$keyInfo.Key
+        }
+        else {
+            -1
+        }
+
+        if ($virtualKey -eq [int][ConsoleKey]::Escape) {
+            switch ($EscMode) {
+                'ClearInput' {
+                    while ($buffer.Length -gt 0) {
+                        $null = $buffer.Remove($buffer.Length - 1, 1)
+                        Write-Host "`b `b" -NoNewline
+                    }
+                    continue
+                }
+                'GoBack' {
+                    Write-Host ''
+                    return [pscustomobject]@{ Status = 'GoBack'; Value = '' }
+                }
+                default {
+                    Write-Host ''
+                    return [pscustomobject]@{ Status = 'Escaped'; Value = '' }
+                }
+            }
+        }
+
+        if ($virtualKey -eq [int][ConsoleKey]::Enter) {
+            Write-Host ''
+            return [pscustomobject]@{ Status = 'Submitted'; Value = $buffer.ToString() }
+        }
+
+        if ($virtualKey -eq [int][ConsoleKey]::Backspace) {
+            if ($buffer.Length -gt 0) {
+                $null = $buffer.Remove($buffer.Length - 1, 1)
+                Write-Host "`b `b" -NoNewline
+            }
+            continue
+        }
+
+        $ch = $keyInfo.Character
+        if ($ch -and -not [char]::IsControl($ch)) {
+            $null = $buffer.Append($ch)
+            Write-Host $ch -NoNewline
+        }
+    }
 }
 
 while ($true) {
@@ -74,8 +168,17 @@ while ($true) {
     }
 
     Write-Host ''
-    $rawSelection = Read-Host $Prompt
-    $selection = [string]$rawSelection
+    $rawResult = Read-SelectionRaw -PromptText $Prompt -EscMode $EscBehavior
+    if ($rawResult.Status -eq 'Escaped') {
+        Write-Output (New-SelectionResult -Status 'Escaped' -Selected:$false)
+        exit 0
+    }
+    if ($rawResult.Status -eq 'GoBack') {
+        Write-Output (New-SelectionResult -Status 'GoBack' -Selection 'b' -Selected:$false)
+        exit 0
+    }
+
+    $selection = [string]$rawResult.Value
     if ($TrimSelection) {
         $selection = ($selection ?? '').Trim()
     }
@@ -87,18 +190,11 @@ while ($true) {
             continue
         }
 
-        Write-Output ([pscustomobject]@{
-                Status = 'NoInput'
-                Selection = $selection
-                Selected = $false
-            })
+        Write-Output (New-SelectionResult -Status 'NoInput' -Selection $selection -Selected:$false)
         exit 0
     }
 
-    Write-Output ([pscustomobject]@{
-            Status = 'Selected'
-            Selection = $selection
-            Selected = $true
-        })
+    $status = if ($rawResult.Status -eq 'SelectedFallback') { 'SelectedFallback' } else { 'Selected' }
+    Write-Output (New-SelectionResult -Status $status -Selection $selection -Selected:$true)
     exit 0
 }

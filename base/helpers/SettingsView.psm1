@@ -7,7 +7,7 @@ Renders the Settings view for the interactive main entrypoint.
 #>
 
 $automationConfigModule = Join-Path $PSScriptRoot 'AutomationConfig.psm1'
-Import-Module $automationConfigModule -Force
+Import-Module $automationConfigModule
 
 function Show-SettingsView {
     [CmdletBinding()]
