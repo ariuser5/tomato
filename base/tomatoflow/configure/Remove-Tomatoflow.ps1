@@ -63,7 +63,15 @@ function Get-CategoryPathSegments {
 
 $kept = @()
 $removedCount = 0
-$managedAliases = @('Run Monthly Flow', 'Preview Storage', 'Ensure New Month Folder')
+$managedAliases = @(
+    'Run Monthly Flow',
+    'Preview Storage',
+    'Ensure New Month Folder',
+    'Label Files',
+    'Archive By Label',
+    'Create Draft Email',
+    'Conclude Previous Month'
+)
 foreach ($entry in $entries) {
     if ($null -eq $entry) { continue }
 

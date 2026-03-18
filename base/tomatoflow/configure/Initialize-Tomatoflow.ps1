@@ -90,6 +90,10 @@ function New-FlowAutomations {
     $runFlowCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/Run-MonthlyFlow.ps1`" -FlowName '$escapedName' -Path '$escapedPath' -PathType '$Type'"
     $previewCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/Preview-Location.ps1`" -Root '$escapedPath'"
     $ensureCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/organization/Ensure-NewMonthFolder.ps1`" -Path '$escapedPath' -PathType '$Type'"
+    $labelCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/organization/Label-Files.ps1`" -Path '$escapedPath' -PathType '$Type'"
+    $archiveCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/organization/Archive-FilesByLabel.ps1`" -Path '$escapedPath' -PathType '$Type'"
+    $draftCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/Create-DraftEmail.ps1`" -FlowName '$escapedName' -Path '$escapedPath' -PathType '$Type'"
+    $concludeCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/organization/Conclude-PreviousMonthFolder.ps1`" -Path '$escapedPath' -PathType '$Type'"
 
     return @(
         [pscustomobject]@{
@@ -106,6 +110,26 @@ function New-FlowAutomations {
             alias = 'Ensure New Month Folder'
             categoryPath = $flowCategory
             command = $ensureCommand
+        },
+        [pscustomobject]@{
+            alias = 'Label Files'
+            categoryPath = $flowCategory
+            command = $labelCommand
+        },
+        [pscustomobject]@{
+            alias = 'Archive By Label'
+            categoryPath = $flowCategory
+            command = $archiveCommand
+        },
+        [pscustomobject]@{
+            alias = 'Create Draft Email'
+            categoryPath = $flowCategory
+            command = $draftCommand
+        },
+        [pscustomobject]@{
+            alias = 'Conclude Previous Month'
+            categoryPath = $flowCategory
+            command = $concludeCommand
         }
     )
 }
@@ -148,7 +172,15 @@ if (-not $resolvedStoragePath) {
 $metadataFilePath = Get-MetadataFilePath
 $metadataConfig = Read-MetadataConfig -Path $metadataFilePath
 $existingAutomations = @($metadataConfig.automations)
-$managedAliases = @('Run Monthly Flow', 'Preview Storage', 'Ensure New Month Folder')
+$managedAliases = @(
+    'Run Monthly Flow',
+    'Preview Storage',
+    'Ensure New Month Folder',
+    'Label Files',
+    'Archive By Label',
+    'Create Draft Email',
+    'Conclude Previous Month'
+)
 
 $filtered = @()
 foreach ($entry in $existingAutomations) {

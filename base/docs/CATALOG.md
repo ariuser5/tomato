@@ -90,7 +90,7 @@ Setup model:
 
 ### Setup and runtime automations
 - File: tomatoflow/configure/Initialize-Tomatoflow.ps1
-- Purpose: creates or updates one flow definition in local tomatoflow metadata.
+- Purpose: creates or updates one flow definition in local tomatoflow metadata, including per-flow commands for monthly run, preview, ensure month folder, label, archive, draft email, and conclude previous month.
 
 - File: tomatoflow/configure/List-Tomatoflows.ps1
 - Purpose: lists flows currently configured in local tomatoflow metadata.
@@ -100,6 +100,9 @@ Setup model:
 
 - File: tomatoflow/automations/Run-MonthlyFlow.ps1
 - Purpose: runs the unified monthly flow for a configured storage path.
+
+- File: tomatoflow/automations/Create-DraftEmail.ps1
+- Purpose: runs draft-email automation for a configured flow, with optional repository-level override at TOMATO_ROOT/automations/Create-DraftEmail.ps1.
 
 ### Orchestration scripts
 - File: tomatoflow/organization/Ensure-NewMonthFolder.ps1

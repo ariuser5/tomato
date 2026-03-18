@@ -41,7 +41,7 @@ $createMonthlyReportScript = Join-Path $organizationDir 'Create-MonthlyReport.ps
 $concludeScript = Join-Path $organizationDir 'Conclude-PreviousMonthFolder.ps1'
 $labelScript = Join-Path $organizationDir 'Label-Files.ps1'
 $archiveScript = Join-Path $organizationDir 'Archive-FilesByLabel.ps1'
-$draftScript = Join-Path $scriptDir 'Create-MailerDraft.ps1'
+$draftScript = Join-Path $scriptDir 'Create-DraftEmail.ps1'
 
 $resultUtilsModule = Join-Path $scriptDir '..\..\utils\common\ResultUtils.psm1'
 Import-Module $resultUtilsModule -Force
@@ -159,7 +159,7 @@ if (Confirm-StepExecution -Step 4 -Title 'Creating draft email automation.') {
         $step4Executed = $true
         $null = & $draftScript
         if ($LASTEXITCODE -ne 0) {
-            throw "Create-MailerDraft failed with exit code $LASTEXITCODE"
+            throw "Create-DraftEmail failed with exit code $LASTEXITCODE"
         }
         $step4Succeeded = $true
     }
