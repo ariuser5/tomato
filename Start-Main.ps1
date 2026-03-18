@@ -76,7 +76,14 @@ function Request-Quit {
 function Wait-ForKeyPress {
     param([Parameter(Mandatory = $true)][string]$Prompt)
 
-    Read-Host $Prompt | Out-Null
+    Write-Info $Prompt
+    try {
+        Read-Host | Out-Null
+    } catch {
+        if ($Host.UI -and $Host.UI.RawUI) {
+            [void]$Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
+        }
+    }
 }
 
 function Request-ViewSelection {

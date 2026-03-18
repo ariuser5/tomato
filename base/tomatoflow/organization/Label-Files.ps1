@@ -99,7 +99,7 @@ function Resolve-Labels {
 }
 
 # Editor module provides Invoke-Editor function
-$editorModule = Join-Path $PSScriptRoot '..\EditorUtils.psm1'
+$editorModule = Join-Path $PSScriptRoot '..\..\utils\EditorUtils.psm1'
 Import-Module $editorModule -Force
 
 $labelUtilsModule = Join-Path $PSScriptRoot '.\modules\LabelUtils.psm1'

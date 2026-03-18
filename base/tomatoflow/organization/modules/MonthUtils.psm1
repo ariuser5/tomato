@@ -13,6 +13,7 @@ function Get-MonthItems {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
         [string[]]$Values,
 
         [Parameter()]
@@ -56,6 +57,7 @@ function Get-LastMonthValue {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
         [string[]]$Values,
 
         [Parameter()]
@@ -81,6 +83,7 @@ function Get-NextMissingMonthFolder {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
         [string[]]$ExistingFolderNames,
 
         [Parameter(Mandatory = $true)]

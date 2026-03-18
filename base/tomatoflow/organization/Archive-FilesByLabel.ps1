@@ -128,8 +128,15 @@ if ($ExcludeNameRegex) {
 
 # Locate reusable scripts
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..\..')
-$archiveFolderScript = Join-Path $repoRoot 'gdrive\Archive-GDriveFolder.ps1'
-$uploadScript = Join-Path $repoRoot 'gdrive\Upload-ToGDrive.ps1'
+$archiveFolderScript = Join-Path $repoRoot 'base\gdrive\Archive-GDriveFolder.ps1'
+$uploadScript = Join-Path $repoRoot 'base\gdrive\Upload-ToGDrive.ps1'
+
+if (-not (Test-Path -LiteralPath $archiveFolderScript -PathType Leaf)) {
+    $archiveFolderScript = Join-Path $repoRoot 'gdrive\Archive-GDriveFolder.ps1'
+}
+if (-not (Test-Path -LiteralPath $uploadScript -PathType Leaf)) {
+    $uploadScript = Join-Path $repoRoot 'gdrive\Upload-ToGDrive.ps1'
+}
 
 if (-not (Test-Path -LiteralPath $archiveFolderScript -PathType Leaf)) {
     throw "Archive helper script not found: $archiveFolderScript"
