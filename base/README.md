@@ -9,10 +9,9 @@ This folder contains the reusable base layer that extender repositories build on
 
 ## What is in base
 - `helpers/`: config loading and automation command execution.
-- `gdrive/`: Google Drive oriented helper scripts.
-- `gmail/`: Gmail helper scripts.
 - `resources/`: shared assets and templates used by automations.
 - `utils/`: generic workflow-agnostic utilities.
+	- `utils/gdrive/`: Google Drive helper scripts.
 - `tomatoflow/`: recommended workflow implementation package.
 
 ## Tomatoflow

@@ -5,9 +5,8 @@ This repository contains a reusable base for PowerShell automation workflows.
 - `conf/`: root configuration for automation menu imports.
 - `base/`: shared "base image" content that other projects can consume and customize.
 	- `base/helpers/`: config-loading and automation-invocation modules.
-	- `base/gdrive/`: Google Drive helper scripts.
-	- `base/gmail/`: Gmail helper scripts.
 	- `base/utils/`: reusable generic utilities used by automations and workflows.
+			- `base/utils/gdrive/`: Google Drive helper scripts.
 		- `base/utils/common/`: cross-cutting helpers (external command wrappers, result/output helpers).
 	- `base/tomatoflow/`: recommended workflow implementation package.
 		- `base/tomatoflow/automations/scripts/`: Tomatoflow building-block scripts.

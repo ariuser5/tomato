@@ -68,6 +68,17 @@ This catalog is the single reference for what the base layer provides and how to
 - Key exports:
   - Invoke-Editor
 
+### Google Drive helpers
+- File: utils/gdrive/Archive-GDriveFolder.ps1
+- Purpose: archives files from a local or remote folder to a local archive artifact.
+- Typical usage:
+  - pwsh -NoProfile -File ./utils/gdrive/Archive-GDriveFolder.ps1 -Path "gdrive:Reports" -FilePattern "*.pdf"
+
+- File: utils/gdrive/Upload-ToGDrive.ps1
+- Purpose: uploads a local file to a destination remote folder.
+- Typical usage:
+  - pwsh -NoProfile -File ./utils/gdrive/Upload-ToGDrive.ps1 -Destination "gdrive:Backups" -LocalFilePath ".\archive.zip"
+
 - File: utils/Select-ViewOption.ps1
 - Purpose: generic view option selector that returns raw user selection based on consumer-defined prompt guidance, with configurable ESC behavior (`ClearInput`, `ExitView`, `GoBack`).
 

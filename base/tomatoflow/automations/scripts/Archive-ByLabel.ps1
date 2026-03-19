@@ -9,7 +9,7 @@ Label format matches Label-GDriveFiles.ps1:
   "[LABEL] filename.ext"
 
 This script intentionally reuses the generic GDrive archiver:
-    gdrive/Archive-GDriveFolder.ps1
+    utils/gdrive/Archive-GDriveFolder.ps1
 
 Examples:
     # Default: zip archives uploaded to <Path>/archives
@@ -128,15 +128,8 @@ if ($ExcludeNameRegex) {
 
 # Locate reusable scripts
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')
-$archiveFolderScript = Join-Path $repoRoot 'base\gdrive\Archive-GDriveFolder.ps1'
-$uploadScript = Join-Path $repoRoot 'base\gdrive\Upload-ToGDrive.ps1'
-
-if (-not (Test-Path -LiteralPath $archiveFolderScript -PathType Leaf)) {
-    $archiveFolderScript = Join-Path $repoRoot 'gdrive\Archive-GDriveFolder.ps1'
-}
-if (-not (Test-Path -LiteralPath $uploadScript -PathType Leaf)) {
-    $uploadScript = Join-Path $repoRoot 'gdrive\Upload-ToGDrive.ps1'
-}
+$archiveFolderScript = Join-Path $repoRoot 'base\utils\gdrive\Archive-GDriveFolder.ps1'
+$uploadScript = Join-Path $repoRoot 'base\utils\gdrive\Upload-ToGDrive.ps1'
 
 if (-not (Test-Path -LiteralPath $archiveFolderScript -PathType Leaf)) {
     throw "Archive helper script not found: $archiveFolderScript"
