@@ -83,9 +83,12 @@ Recommended commit message:
 ## Base runtime guide
 
 ### Prerequisite
-- rclone (for Google Drive access)
+- rclone (required for remote paths such as `gdrive:...`)
 	- Install (Windows): `winget install Rclone.Rclone`
 	- Configure once: `rclone config` and create a `drive` remote (for example `gdrive`)
+- mailer CLI (required for `Create Draft Email` automation)
+	- Install on Windows from the Mailer project using: `./scripts/Install-Mailer.ps1`
+	- Ensure `mailer` is available on PATH
 
 ### Interactive app behavior
 - The main app is interactive and focuses on discovery/launch, not business logic.

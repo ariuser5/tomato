@@ -9,6 +9,10 @@ This catalog is the single reference for what the base layer provides and how to
 
 ## Runtime entrypoints
 
+## External prerequisites
+- `rclone` is required for any remote path usage (for example `gdrive:...`).
+- `mailer` is required by `tomatoflow/automations/Create-DraftEmail.ps1`.
+
 ### Root app entrypoint
 - File: ../Start-Main.ps1 (repo root)
 - Purpose: interactive launcher for configured automations and folder previews.
@@ -113,7 +117,7 @@ Setup model:
 - Purpose: runs the unified monthly flow for a configured storage path.
 
 - File: tomatoflow/automations/Create-DraftEmail.ps1
-- Purpose: runs draft-email automation for a configured flow, with optional repository-level override at TOMATO_ROOT/automations/Create-DraftEmail.ps1.
+- Purpose: creates a Gmail draft via `mailer draft --param-file` using `base/resources/mailer-sample.json`, with optional repository-level override at TOMATO_ROOT/automations/Create-DraftEmail.ps1.
 
 - File: tomatoflow/automations/Conclude-MonthFolder.ps1
 - Purpose: resolves target subfolder for conclude action (ESC-aware prompt, latest-month fallback), then concludes that month folder.
