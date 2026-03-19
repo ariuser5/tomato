@@ -104,6 +104,12 @@ Setup model:
 - File: tomatoflow/automations/Create-DraftEmail.ps1
 - Purpose: runs draft-email automation for a configured flow, with optional repository-level override at TOMATO_ROOT/automations/Create-DraftEmail.ps1.
 
+- File: tomatoflow/automations/modules/FlowTargetUtils.psm1
+- Purpose: shared target-folder resolution for flow automations, including latest-month fallback and ESC-aware prompt input.
+
+- File: tomatoflow/configure/modules/FlowConfigUtils.psm1
+- Purpose: shared flow configuration helpers for managed alias set and categoryPath parsing.
+
 ### Orchestration scripts
 - File: tomatoflow/organization/Ensure-NewMonthFolder.ps1
 - Purpose: creates the next missing month folder based on existing month folders.

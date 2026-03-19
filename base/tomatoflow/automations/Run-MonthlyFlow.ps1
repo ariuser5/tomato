@@ -43,14 +43,8 @@ $labelScript = Join-Path $organizationDir 'Label-Files.ps1'
 $archiveScript = Join-Path $organizationDir 'Archive-FilesByLabel.ps1'
 $draftScript = Join-Path $scriptDir 'Create-DraftEmail.ps1'
 
-$pathModule = Join-Path $scriptDir '..\..\utils\PathUtils.psm1'
-Import-Module $pathModule -Force
-
-$monthUtilsModule = Join-Path $organizationDir 'modules\MonthUtils.psm1'
-Import-Module $monthUtilsModule -Force
-
-$commandUtilsModule = Join-Path $scriptDir '..\..\utils\common\CommandUtils.psm1'
-Import-Module $commandUtilsModule -Force
+$flowTargetUtilsModule = Join-Path $scriptDir '.\modules\FlowTargetUtils.psm1'
+Import-Module $flowTargetUtilsModule -Force
 
 $resultUtilsModule = Join-Path $scriptDir '..\..\utils\common\ResultUtils.psm1'
 Import-Module $resultUtilsModule -Force
@@ -82,43 +76,19 @@ function Confirm-StepExecution {
     }
 }
 
-function Resolve-CurrentMonthFolderPath {
+function Test-NonZeroExitCode {
+    [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)][string]$BasePath,
-        [Parameter(Mandatory = $true)][string]$ResolvedPathType
+        [Parameter()]
+        [AllowNull()]
+        [object]$ExitCode
     )
 
-    $baseInfo = Resolve-UnifiedPath -Path $BasePath -PathType $ResolvedPathType
-
-    $existingDirs = @()
-    if ($baseInfo.PathType -eq 'Remote') {
-        Assert-RcloneAvailable
-        $existingDirs = @(
-            Invoke-Rclone -Arguments @('lsf', $baseInfo.Normalized, '--dirs-only') -ErrorMessage "Failed to list remote directory '$($baseInfo.Normalized)'."
-        )
-        $existingDirs = @(
-            $existingDirs |
-                Where-Object { $_ -ne $null -and $_ -ne '' } |
-                ForEach-Object { $_.TrimEnd('/') }
-        )
-    }
-    else {
-        if (-not (Test-Path -LiteralPath $baseInfo.LocalPath -PathType Container)) {
-            throw "Storage path does not exist: $($baseInfo.LocalPath)"
-        }
-
-        $existingDirs = @(
-            Get-ChildItem -LiteralPath $baseInfo.LocalPath -Directory -ErrorAction Stop |
-                Select-Object -ExpandProperty Name
-        )
+    if ($null -eq $ExitCode) {
+        return $false
     }
 
-    $latestMonthName = Get-LastMonthValue -Values $existingDirs -SkipInvalid
-    if (-not $latestMonthName) {
-        return $null
-    }
-
-    return (Join-UnifiedPath -Base $baseInfo.Normalized -Child $latestMonthName -PathType $baseInfo.PathType)
+    return ([int]$ExitCode -ne 0)
 }
 
 Write-Host "========================================" -ForegroundColor Cyan
@@ -137,7 +107,7 @@ $step4Executed = $false
 $step4Succeeded = $false
 $step5Output = @()
 
-$currentMonthPath = Resolve-CurrentMonthFolderPath -BasePath $Path -ResolvedPathType $PathType
+$currentMonthPath = Get-LatestMonthTargetPath -RootPath $Path -PathType $PathType
 if ($currentMonthPath) {
     Write-Host "Current month folder before step 1: $currentMonthPath" -ForegroundColor Gray
 }
@@ -148,7 +118,7 @@ else {
 if (Confirm-StepExecution -Step 1 -Title 'Creating next month folder and template artifacts.') {
     Write-Host '[1/5] Creating next month folder and template artifacts...' -ForegroundColor Yellow
     $step1Output = @(& $createMonthlyReportScript -Path $Path -PathType $PathType -StartYear $StartYear -NewFolderPrefix $NewFolderPrefix)
-    if ($LASTEXITCODE -ne 0) {
+    if (Test-NonZeroExitCode -ExitCode $LASTEXITCODE) {
         throw "Create-MonthlyReport failed with exit code $LASTEXITCODE"
     }
 
@@ -186,7 +156,7 @@ if (Confirm-StepExecution -Step 2 -Title 'Labeling files in current month folder
         }
 
         $step2Output = @(& $labelScript @labelArgs)
-        if ($LASTEXITCODE -ne 0) {
+        if (Test-NonZeroExitCode -ExitCode $LASTEXITCODE) {
             throw "Label-Files failed with exit code $LASTEXITCODE"
         }
     }
@@ -202,7 +172,7 @@ if (Confirm-StepExecution -Step 3 -Title 'Archiving files by label.') {
     else {
         Write-Host '[3/5] Archiving files by label...' -ForegroundColor Yellow
         $step3Output = @(& $archiveScript -Path $currentMonthPath -PathType $PathType)
-        if ($LASTEXITCODE -ne 0) {
+        if (Test-NonZeroExitCode -ExitCode $LASTEXITCODE) {
             throw "Archive-FilesByLabel failed with exit code $LASTEXITCODE"
         }
     }
@@ -216,8 +186,8 @@ if (Confirm-StepExecution -Step 4 -Title 'Creating draft email automation.') {
     if (Test-Path -LiteralPath $draftScript -PathType Leaf) {
         Write-Host '[4/5] Creating draft email automation...' -ForegroundColor Yellow
         $step4Executed = $true
-        $null = & $draftScript
-        if ($LASTEXITCODE -ne 0) {
+        $null = & $draftScript -FlowName $FlowName -Path $currentMonthPath -PathType $PathType
+        if (Test-NonZeroExitCode -ExitCode $LASTEXITCODE) {
             throw "Create-DraftEmail failed with exit code $LASTEXITCODE"
         }
         $step4Succeeded = $true
@@ -233,7 +203,7 @@ else {
 if (Confirm-StepExecution -Step 5 -Title 'Concluding previous month folder.') {
     Write-Host '[5/5] Concluding previous month folder...' -ForegroundColor Yellow
     $step5Output = @(& $concludeScript -Path $Path -PathType $PathType)
-    if ($LASTEXITCODE -ne 0) {
+    if (Test-NonZeroExitCode -ExitCode $LASTEXITCODE) {
         throw "Conclude-PreviousMonthFolder failed with exit code $LASTEXITCODE"
     }
 }

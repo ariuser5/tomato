@@ -20,13 +20,19 @@ param(
 
     [Parameter()]
     [ValidateSet('Auto', 'Local', 'Remote')]
-    [string]$PathType = 'Auto'
+    [string]$PathType = 'Auto',
+
+    [Parameter()]
+    [string]$Subfolder
 )
 
 $ErrorActionPreference = 'Stop'
 
 $resultUtilsModule = Join-Path $PSScriptRoot '..\..\utils\common\ResultUtils.psm1'
 Import-Module $resultUtilsModule -Force
+
+$flowTargetUtilsModule = Join-Path $PSScriptRoot '.\modules\FlowTargetUtils.psm1'
+Import-Module $flowTargetUtilsModule -Force
 
 $tomatoRoot = ([string]$env:TOMATO_ROOT ?? '').Trim()
 $customDraftScript = if ($tomatoRoot) {
@@ -38,9 +44,30 @@ $customDraftScript = if ($tomatoRoot) {
 if ($customDraftScript -and (Test-Path -LiteralPath $customDraftScript -PathType Leaf)) {
     Write-Host "Running custom draft automation: $customDraftScript" -ForegroundColor Yellow
 
+    $targetPath = $Path
+    if ($Path) {
+        $target = Resolve-FlowTargetPath -RootPath $Path -PathType $PathType -Subfolder $Subfolder -PromptLabel 'draft email'
+        if ($target.Status -eq 'Aborted') {
+            Write-Host 'Draft email action aborted (ESC).' -ForegroundColor DarkYellow
+            Write-Output (New-ToolResult -Status 'Aborted' -Data @{
+                    FlowName = $FlowName
+                    RootPath = $Path
+                    PathType = $PathType
+                    Action = 'Create Draft Email'
+                })
+            exit 0
+        }
+
+        if ($target.UsedFallback) {
+            Write-Host "Using latest month folder: $($target.SubfolderName)" -ForegroundColor Gray
+        }
+
+        $targetPath = $target.TargetPath
+    }
+
     $invokeArgs = @{}
     if ($FlowName) { $invokeArgs.FlowName = $FlowName }
-    if ($Path) { $invokeArgs.Path = $Path }
+    if ($targetPath) { $invokeArgs.Path = $targetPath }
     if ($PathType) { $invokeArgs.PathType = $PathType }
 
     $invocationOutput = $null
@@ -62,7 +89,7 @@ if ($customDraftScript -and (Test-Path -LiteralPath $customDraftScript -PathType
 
     Write-Output (New-ToolResult -Status 'Completed' -Data @{
             FlowName = $FlowName
-            Path = $Path
+            Path = $targetPath
             PathType = $PathType
             Script = $customDraftScript
         })

@@ -14,6 +14,9 @@ $ErrorActionPreference = 'Stop'
 $resultUtilsModule = Join-Path $PSScriptRoot '..\..\utils\common\ResultUtils.psm1'
 Import-Module $resultUtilsModule -Force
 
+$flowConfigUtilsModule = Join-Path $PSScriptRoot '.\modules\FlowConfigUtils.psm1'
+Import-Module $flowConfigUtilsModule -Force
+
 $localAppData = ([string]$env:LOCALAPPDATA ?? '').Trim()
 if (-not $localAppData) {
     throw 'LOCALAPPDATA is not set.'
@@ -42,36 +45,9 @@ elseif ($parsed.PSObject.Properties.Name -contains 'automations') {
     $entries = @($parsed.automations)
 }
 
-function Get-CategoryPathSegments {
-    param([Parameter(Mandatory = $true)][object]$Entry)
-
-    if (-not ($Entry.PSObject.Properties.Name -contains 'categoryPath')) {
-        return @()
-    }
-
-    $value = $Entry.categoryPath
-    if (-not ($value -is [array])) {
-        return @()
-    }
-
-    return @(
-        @($value) |
-            ForEach-Object { ([string]$_).Trim() } |
-            Where-Object { $_ }
-    )
-}
-
 $kept = @()
 $removedCount = 0
-$managedAliases = @(
-    'Run Monthly Flow',
-    'Preview Storage',
-    'Ensure New Month Folder',
-    'Label Files',
-    'Archive By Label',
-    'Create Draft Email',
-    'Conclude Previous Month'
-)
+$managedAliases = Get-ManagedFlowAliases
 foreach ($entry in $entries) {
     if ($null -eq $entry) { continue }
 

@@ -25,6 +25,9 @@ $ErrorActionPreference = 'Stop'
 $resultUtilsModule = Join-Path $PSScriptRoot '..\..\utils\common\ResultUtils.psm1'
 Import-Module $resultUtilsModule -Force
 
+$flowConfigUtilsModule = Join-Path $PSScriptRoot '.\modules\FlowConfigUtils.psm1'
+Import-Module $flowConfigUtilsModule -Force
+
 function Get-MetadataFilePath {
     [CmdletBinding()]
     param()
@@ -90,8 +93,8 @@ function New-FlowAutomations {
     $runFlowCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/Run-MonthlyFlow.ps1`" -FlowName '$escapedName' -Path '$escapedPath' -PathType '$Type'"
     $previewCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/Preview-Location.ps1`" -Root '$escapedPath'"
     $ensureCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/organization/Ensure-NewMonthFolder.ps1`" -Path '$escapedPath' -PathType '$Type'"
-    $labelCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/organization/Label-Files.ps1`" -Path '$escapedPath' -PathType '$Type'"
-    $archiveCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/organization/Archive-FilesByLabel.ps1`" -Path '$escapedPath' -PathType '$Type'"
+    $labelCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/Label-Files.ps1`" -Path '$escapedPath' -PathType '$Type'"
+    $archiveCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/Archive-ByLabel.ps1`" -Path '$escapedPath' -PathType '$Type'"
     $draftCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/Create-DraftEmail.ps1`" -FlowName '$escapedName' -Path '$escapedPath' -PathType '$Type'"
     $concludeCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/organization/Conclude-PreviousMonthFolder.ps1`" -Path '$escapedPath' -PathType '$Type'"
 
@@ -134,25 +137,6 @@ function New-FlowAutomations {
     )
 }
 
-function Get-CategoryPathSegments {
-    param([Parameter(Mandatory = $true)][object]$Entry)
-
-    if (-not ($Entry.PSObject.Properties.Name -contains 'categoryPath')) {
-        return @()
-    }
-
-    $value = $Entry.categoryPath
-    if (-not ($value -is [array])) {
-        return @()
-    }
-
-    return @(
-        @($value) |
-            ForEach-Object { ([string]$_).Trim() } |
-            Where-Object { $_ }
-    )
-}
-
 $resolvedFlowName = ([string]$FlowName ?? '').Trim()
 if (-not $resolvedFlowName -and $Host.UI -and $Host.UI.RawUI) {
     $resolvedFlowName = (Read-Host 'Flow name (for example contractor/party name)').Trim()
@@ -172,15 +156,7 @@ if (-not $resolvedStoragePath) {
 $metadataFilePath = Get-MetadataFilePath
 $metadataConfig = Read-MetadataConfig -Path $metadataFilePath
 $existingAutomations = @($metadataConfig.automations)
-$managedAliases = @(
-    'Run Monthly Flow',
-    'Preview Storage',
-    'Ensure New Month Folder',
-    'Label Files',
-    'Archive By Label',
-    'Create Draft Email',
-    'Conclude Previous Month'
-)
+$managedAliases = Get-ManagedFlowAliases
 
 $filtered = @()
 foreach ($entry in $existingAutomations) {
