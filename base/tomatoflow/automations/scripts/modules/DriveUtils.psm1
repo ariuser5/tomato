@@ -1,7 +1,7 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$commandUtilsModule = Join-Path $PSScriptRoot '..\..\..\utils\common\CommandUtils.psm1'
+$commandUtilsModule = Join-Path $PSScriptRoot '..\..\..\..\utils\common\CommandUtils.psm1'
 Import-Module $commandUtilsModule -Force
 
 # Runs rclone with JSON output and parses the result.

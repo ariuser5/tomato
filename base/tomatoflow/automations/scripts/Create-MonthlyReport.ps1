@@ -42,13 +42,13 @@ $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ensureScriptPath = Join-Path $scriptDir ".\Ensure-NewMonthFolder.ps1"
 $copyScriptPath = Join-Path $scriptDir ".\Copy-ToMonthFolder.ps1"
-$baseDir = Split-Path (Split-Path $scriptDir -Parent) -Parent
+$baseDir = Split-Path (Split-Path (Split-Path $scriptDir -Parent) -Parent) -Parent
 $templateFolder = Join-Path $baseDir "resources\monthly_report_template"
 
-$pathModule = Join-Path $scriptDir "..\..\utils\PathUtils.psm1"
+$pathModule = Join-Path $scriptDir "..\..\..\utils\PathUtils.psm1"
 Import-Module $pathModule -Force
 
-$resultUtilsModule = Join-Path $scriptDir "..\..\utils\common\ResultUtils.psm1"
+$resultUtilsModule = Join-Path $scriptDir "..\..\..\utils\common\ResultUtils.psm1"
 Import-Module $resultUtilsModule -Force
 
 $baseInfo = Resolve-UnifiedPath -Path $Path -PathType $PathType

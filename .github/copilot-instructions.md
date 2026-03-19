@@ -15,8 +15,8 @@
   - `UTILS_ROOT`
 - For utility refactors, prefer small composable scripts that orchestrate reusable module functions.
 - Keep workflow-agnostic utilities under `base/utils`.
-- Keep Tomatoflow-specific scripts under `base/tomatoflow/organization/*.ps1` and reusable helpers in:
-  - `base/tomatoflow/organization/modules/*.psm1`
+- Keep Tomatoflow-specific building-block scripts under `base/tomatoflow/automations/scripts/*.ps1` and reusable helpers in:
+  - `base/tomatoflow/automations/scripts/modules/*.psm1`
 - Keep generic reusable helpers in:
   - `base/utils/common/*.psm1`
 - Reuse shared command wrappers (`Assert-RcloneAvailable`, `Invoke-Rclone`, `Test-ExecutableAvailable`) instead of ad-hoc command invocations.

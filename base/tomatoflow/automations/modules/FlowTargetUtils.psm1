@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 $pathModule = Join-Path $PSScriptRoot '..\..\..\utils\PathUtils.psm1'
 Import-Module $pathModule -Force
 
-$monthUtilsModule = Join-Path $PSScriptRoot '..\..\organization\modules\MonthUtils.psm1'
+$monthUtilsModule = Join-Path $PSScriptRoot '..\scripts\modules\MonthUtils.psm1'
 Import-Module $monthUtilsModule -Force
 
 $commandUtilsModule = Join-Path $PSScriptRoot '..\..\..\utils\common\CommandUtils.psm1'

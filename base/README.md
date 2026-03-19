@@ -27,8 +27,8 @@ It is intentionally generic and party-oriented:
 Tomatoflow package layout:
 - `tomatoflow/automations.json`: default tomatoflow automation entries.
 - `tomatoflow/configure/`: setup and configuration management scripts.
-- `tomatoflow/organization/`: orchestration scripts.
-- `tomatoflow/organization/modules/`: reusable Tomatoflow-specific modules.
+- `tomatoflow/automations/scripts/`: Tomatoflow building-block scripts.
+- `tomatoflow/automations/scripts/modules/`: reusable Tomatoflow-specific modules.
 
 Tomatoflow runtime model:
 - Fresh clone shows only setup automations under `tomatoflow-setup`.

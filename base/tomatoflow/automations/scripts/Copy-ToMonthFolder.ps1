@@ -38,13 +38,13 @@
 
 $ErrorActionPreference = "Stop"
 
-$pathModule = Join-Path $PSScriptRoot '..\..\utils\PathUtils.psm1'
+$pathModule = Join-Path $PSScriptRoot '..\..\..\utils\PathUtils.psm1'
 Import-Module $pathModule -Force
 
-$commandUtilsModule = Join-Path $PSScriptRoot '..\..\utils\common\CommandUtils.psm1'
+$commandUtilsModule = Join-Path $PSScriptRoot '..\..\..\utils\common\CommandUtils.psm1'
 Import-Module $commandUtilsModule -Force
 
-$resultUtilsModule = Join-Path $PSScriptRoot '..\..\utils\common\ResultUtils.psm1'
+$resultUtilsModule = Join-Path $PSScriptRoot '..\..\..\utils\common\ResultUtils.psm1'
 Import-Module $resultUtilsModule -Force
 
 $src = Resolve-UnifiedPath -Path $SourcePath -PathType $SourcePathType

@@ -92,7 +92,7 @@ function New-FlowAutomations {
 
     $runFlowCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/Run-MonthlyFlow.ps1`" -FlowName '$escapedName' -Path '$escapedPath' -PathType '$Type'"
     $previewCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/Preview-Location.ps1`" -Root '$escapedPath'"
-    $ensureCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/organization/Ensure-NewMonthFolder.ps1`" -Path '$escapedPath' -PathType '$Type'"
+    $ensureCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/scripts/Ensure-NewMonthFolder.ps1`" -Path '$escapedPath' -PathType '$Type'"
     $labelCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/Label-Files.ps1`" -Path '$escapedPath' -PathType '$Type'"
     $archiveCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/Archive-ByLabel.ps1`" -Path '$escapedPath' -PathType '$Type'"
     $draftCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/Create-DraftEmail.ps1`" -FlowName '$escapedName' -Path '$escapedPath' -PathType '$Type'"

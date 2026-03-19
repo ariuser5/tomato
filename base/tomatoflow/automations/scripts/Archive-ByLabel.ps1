@@ -1,6 +1,6 @@
 <#
 -------------------------------------------------------------------------------
-Archive-FilesByLabel.ps1
+Archive-ByLabel.ps1
 -------------------------------------------------------------------------------
 Helper: creates one archive per label for top-level files in a Google Drive
 folder and uploads the archives back to Google Drive.
@@ -13,13 +13,13 @@ This script intentionally reuses the generic GDrive archiver:
 
 Examples:
     # Default: zip archives uploaded to <Path>/archives
-    .\Archive-FilesByLabel.ps1 -Path "gdrive:clients/acme/inbox"
+    .\Archive-ByLabel.ps1 -Path "gdrive:clients/acme/inbox"
 
   # Use 7z
-    .\Archive-FilesByLabel.ps1 -Path "gdrive:clients/acme/inbox" -ArchiveExtension "7z"
+    .\Archive-ByLabel.ps1 -Path "gdrive:clients/acme/inbox" -ArchiveExtension "7z"
 
   # Use tar.gz and upload elsewhere
-    .\Archive-FilesByLabel.ps1 -Path "gdrive:clients/acme/inbox" -ArchiveExtension "tar.gz" -ArchiveDestinationPath "gdrive:clients/acme/archives"
+    .\Archive-ByLabel.ps1 -Path "gdrive:clients/acme/inbox" -ArchiveExtension "tar.gz" -ArchiveDestinationPath "gdrive:clients/acme/archives"
 -------------------------------------------------------------------------------
 #>
 
@@ -64,13 +64,13 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$pathModule = Join-Path $PSScriptRoot '..\..\utils\PathUtils.psm1'
+$pathModule = Join-Path $PSScriptRoot '..\..\..\utils\PathUtils.psm1'
 Import-Module $pathModule -Force
 
-$commandUtilsModule = Join-Path $PSScriptRoot '..\..\utils\common\CommandUtils.psm1'
+$commandUtilsModule = Join-Path $PSScriptRoot '..\..\..\utils\common\CommandUtils.psm1'
 Import-Module $commandUtilsModule -Force
 
-$resultUtilsModule = Join-Path $PSScriptRoot '..\..\utils\common\ResultUtils.psm1'
+$resultUtilsModule = Join-Path $PSScriptRoot '..\..\..\utils\common\ResultUtils.psm1'
 Import-Module $resultUtilsModule -Force
 
 $labelUtilsModule = Join-Path $PSScriptRoot '.\modules\LabelUtils.psm1'
@@ -127,7 +127,7 @@ if ($ExcludeNameRegex) {
 }
 
 # Locate reusable scripts
-$repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..\..')
+$repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')
 $archiveFolderScript = Join-Path $repoRoot 'base\gdrive\Archive-GDriveFolder.ps1'
 $uploadScript = Join-Path $repoRoot 'base\gdrive\Upload-ToGDrive.ps1'
 

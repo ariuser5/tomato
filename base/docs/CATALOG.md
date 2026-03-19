@@ -113,50 +113,50 @@ Setup model:
 - File: tomatoflow/configure/modules/FlowConfigUtils.psm1
 - Purpose: shared flow configuration helpers for managed alias set and categoryPath parsing.
 
-### Orchestration scripts
-- File: tomatoflow/organization/Ensure-NewMonthFolder.ps1
+### Tomatoflow building-block scripts
+- File: tomatoflow/automations/scripts/Ensure-NewMonthFolder.ps1
 - Purpose: creates the next missing month folder based on existing month folders.
 - Typical usage:
-  - pwsh -NoProfile -File ./tomatoflow/organization/Ensure-NewMonthFolder.ps1 -Path "gdrive:parties/entity/rapoarte"
+  - pwsh -NoProfile -File ./tomatoflow/automations/scripts/Ensure-NewMonthFolder.ps1 -Path "gdrive:parties/entity/rapoarte"
 
-- File: tomatoflow/organization/Create-MonthlyReport.ps1
+- File: tomatoflow/automations/scripts/Create-MonthlyReport.ps1
 - Purpose: creates next month folder and copies template files.
 - Typical usage:
-  - pwsh -NoProfile -File ./tomatoflow/organization/Create-MonthlyReport.ps1 -Path "gdrive:parties/entity/rapoarte"
+  - pwsh -NoProfile -File ./tomatoflow/automations/scripts/Create-MonthlyReport.ps1 -Path "gdrive:parties/entity/rapoarte"
 
-- File: tomatoflow/organization/Conclude-MonthFolder.ps1
+- File: tomatoflow/automations/scripts/Conclude-MonthFolder.ps1
 - Purpose: removes underscore prefix from the last worked month folder (or an explicit target folder when provided).
 - Typical usage:
-  - pwsh -NoProfile -File ./tomatoflow/organization/Conclude-MonthFolder.ps1 -Path "gdrive:parties/entity/rapoarte"
+  - pwsh -NoProfile -File ./tomatoflow/automations/scripts/Conclude-MonthFolder.ps1 -Path "gdrive:parties/entity/rapoarte"
 
-- File: tomatoflow/organization/Label-Files.ps1
+- File: tomatoflow/automations/scripts/Label-Files.ps1
 - Purpose: labels files (for example INVOICE/EXPENSE/BALANCE) for later grouping.
 - Typical usage:
-  - pwsh -NoProfile -File ./tomatoflow/organization/Label-Files.ps1 -Path "gdrive:parties/entity/rapoarte/_current-month"
+  - pwsh -NoProfile -File ./tomatoflow/automations/scripts/Label-Files.ps1 -Path "gdrive:parties/entity/rapoarte/_current-month"
 
-- File: tomatoflow/organization/Archive-FilesByLabel.ps1
+- File: tomatoflow/automations/scripts/Archive-ByLabel.ps1
 - Purpose: creates one archive per label and uploads/copies output.
 - Typical usage:
-  - pwsh -NoProfile -File ./tomatoflow/organization/Archive-FilesByLabel.ps1 -Path "gdrive:parties/entity/rapoarte/_current-month"
+  - pwsh -NoProfile -File ./tomatoflow/automations/scripts/Archive-ByLabel.ps1 -Path "gdrive:parties/entity/rapoarte/_current-month"
 
-- File: tomatoflow/organization/Copy-ToMonthFolder.ps1
+- File: tomatoflow/automations/scripts/Copy-ToMonthFolder.ps1
 - Purpose: copies month assets between source/destination paths.
 - Typical usage:
-  - pwsh -NoProfile -File ./tomatoflow/organization/Copy-ToMonthFolder.ps1 -SourcePath "..." -DestinationPath "..."
+  - pwsh -NoProfile -File ./tomatoflow/automations/scripts/Copy-ToMonthFolder.ps1 -SourcePath "..." -DestinationPath "..."
 
-- File: tomatoflow/organization/Get-LastMonth.ps1
+- File: tomatoflow/automations/scripts/Get-LastMonth.ps1
 - Purpose: returns latest month tag from a list of month names.
 - Typical usage:
-  - pwsh -NoProfile -File ./tomatoflow/organization/Get-LastMonth.ps1 -Values @('jan-2026','_feb-2026') -SkipInvalid
+  - pwsh -NoProfile -File ./tomatoflow/automations/scripts/Get-LastMonth.ps1 -Values @('jan-2026','_feb-2026') -SkipInvalid
 
 ### Tomatoflow reusable modules
-- File: tomatoflow/organization/modules/MonthUtils.psm1
+- File: tomatoflow/automations/scripts/modules/MonthUtils.psm1
 - Purpose: month parsing and next-missing-month calculations.
 
-- File: tomatoflow/organization/modules/LabelUtils.psm1
+- File: tomatoflow/automations/scripts/modules/LabelUtils.psm1
 - Purpose: label parsing, selector generation, unique name rules.
 
-- File: tomatoflow/organization/modules/DriveUtils.psm1
+- File: tomatoflow/automations/scripts/modules/DriveUtils.psm1
 - Purpose: Drive metadata helpers and browser URL generation.
 
 ### Tomatoflow automations menu

@@ -2,7 +2,7 @@
 -------------------------------------------------------------------------------
 Ensure-NewMonthFolder.ps1
 -------------------------------------------------------------------------------
-Tomatoflow wrapper for ../organization/Ensure-NewMonthFolder.ps1.
+Tomatoflow wrapper for ./scripts/Ensure-NewMonthFolder.ps1.
 
 Behavior:
 - If -Path is not provided, asks the user to enter it interactively.
@@ -79,7 +79,7 @@ function Resolve-TargetPath {
     return $resolved
 }
 
-$targetScript = Join-Path $PSScriptRoot '..\organization\Ensure-NewMonthFolder.ps1'
+$targetScript = Join-Path $PSScriptRoot '.\scripts\Ensure-NewMonthFolder.ps1'
 $targetScript = (Resolve-Path -LiteralPath $targetScript -ErrorAction Stop).Path
 
 $resolvedPath = Resolve-TargetPath -InitialPath $Path

@@ -10,8 +10,8 @@ This repository contains a reusable base for PowerShell automation workflows.
 	- `base/utils/`: reusable generic utilities used by automations and workflows.
 		- `base/utils/common/`: cross-cutting helpers (external command wrappers, result/output helpers).
 	- `base/tomatoflow/`: recommended workflow implementation package.
-		- `base/tomatoflow/organization/`: Tomatoflow orchestration scripts.
-		- `base/tomatoflow/organization/modules/`: reusable Tomatoflow-specific modules.
+		- `base/tomatoflow/automations/scripts/`: Tomatoflow building-block scripts.
+		- `base/tomatoflow/automations/scripts/modules/`: reusable Tomatoflow-specific modules.
 - `Start-Main.ps1`: interactive root entrypoint that launches the base runtime.
 
 ## Design intent
@@ -117,10 +117,10 @@ Recommended commit message:
 ### Split workflow scripts from reusable modules
 - Keep workflow-agnostic utilities under `base/utils`.
 - Keep the recommended workflow implementation under `base/tomatoflow`.
-- Keep orchestration in scripts under `base/tomatoflow/organization/*.ps1`.
+- Keep Tomatoflow building-block scripts under `base/tomatoflow/automations/scripts/*.ps1`.
 - Move reusable logic into modules under:
 	- `base/utils/common/*.psm1` (generic)
-	- `base/tomatoflow/organization/modules/*.psm1` (workflow-specific)
+	- `base/tomatoflow/automations/scripts/modules/*.psm1` (workflow-specific)
 - Prefer importing modules instead of duplicating helper functions across scripts.
 
 ### Output contract for script composition

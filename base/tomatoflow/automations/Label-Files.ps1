@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # Label-Files.ps1
 # -----------------------------------------------------------------------------
-# Tomatoflow automation wrapper for organization/Label-Files.ps1.
+# Tomatoflow automation wrapper for automations/scripts/Label-Files.ps1.
 #
 # Behavior:
 # - Works from flow root path and asks for a target subfolder.
@@ -42,7 +42,7 @@ Import-Module $flowTargetUtilsModule -Force
 $resultUtilsModule = Join-Path $PSScriptRoot '..\..\utils\common\ResultUtils.psm1'
 Import-Module $resultUtilsModule -Force
 
-$targetScript = Join-Path $PSScriptRoot '..\organization\Label-Files.ps1'
+$targetScript = Join-Path $PSScriptRoot '.\scripts\Label-Files.ps1'
 $targetScript = (Resolve-Path -LiteralPath $targetScript -ErrorAction Stop).Path
 
 $target = Resolve-FlowTargetPath -RootPath $Path -PathType $PathType -Subfolder $Subfolder -PromptLabel 'label files'

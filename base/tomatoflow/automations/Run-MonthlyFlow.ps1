@@ -35,12 +35,12 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$organizationDir = Join-Path $scriptDir '..\organization'
+$scriptsDir = Join-Path $scriptDir '.\scripts'
 
-$createMonthlyReportScript = Join-Path $organizationDir 'Create-MonthlyReport.ps1'
-$concludeScript = Join-Path $organizationDir 'Conclude-MonthFolder.ps1'
-$labelScript = Join-Path $organizationDir 'Label-Files.ps1'
-$archiveScript = Join-Path $organizationDir 'Archive-FilesByLabel.ps1'
+$createMonthlyReportScript = Join-Path $scriptsDir 'Create-MonthlyReport.ps1'
+$concludeScript = Join-Path $scriptsDir 'Conclude-MonthFolder.ps1'
+$labelScript = Join-Path $scriptsDir 'Label-Files.ps1'
+$archiveScript = Join-Path $scriptsDir 'Archive-ByLabel.ps1'
 $draftScript = Join-Path $scriptDir 'Create-DraftEmail.ps1'
 
 $flowTargetUtilsModule = Join-Path $scriptDir '.\modules\FlowTargetUtils.psm1'
@@ -173,7 +173,7 @@ if (Confirm-StepExecution -Step 3 -Title 'Archiving files by label.') {
         Write-Host '[3/5] Archiving files by label...' -ForegroundColor Yellow
         $step3Output = @(& $archiveScript -Path $currentMonthPath -PathType $PathType)
         if (Test-NonZeroExitCode -ExitCode $LASTEXITCODE) {
-            throw "Archive-FilesByLabel failed with exit code $LASTEXITCODE"
+            throw "Archive-ByLabel failed with exit code $LASTEXITCODE"
         }
     }
 }

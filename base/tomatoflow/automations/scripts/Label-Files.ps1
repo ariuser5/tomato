@@ -99,7 +99,7 @@ function Resolve-Labels {
 }
 
 # Editor module provides Invoke-Editor function
-$editorModule = Join-Path $PSScriptRoot '..\..\utils\EditorUtils.psm1'
+$editorModule = Join-Path $PSScriptRoot '..\..\..\utils\EditorUtils.psm1'
 Import-Module $editorModule -Force
 
 $labelUtilsModule = Join-Path $PSScriptRoot '.\modules\LabelUtils.psm1'
@@ -108,10 +108,10 @@ Import-Module $labelUtilsModule -Force
 $driveUtilsModule = Join-Path $PSScriptRoot '.\modules\DriveUtils.psm1'
 Import-Module $driveUtilsModule -Force
 
-$commandUtilsModule = Join-Path $PSScriptRoot '..\..\utils\common\CommandUtils.psm1'
+$commandUtilsModule = Join-Path $PSScriptRoot '..\..\..\utils\common\CommandUtils.psm1'
 Import-Module $commandUtilsModule -Force
 
-$resultUtilsModule = Join-Path $PSScriptRoot '..\..\utils\common\ResultUtils.psm1'
+$resultUtilsModule = Join-Path $PSScriptRoot '..\..\..\utils\common\ResultUtils.psm1'
 Import-Module $resultUtilsModule -Force
 
 function New-RebaseTodoText {
@@ -499,7 +499,7 @@ if ($ExcludeNameRegex) {
     $excludeRegexObj = [regex]$ExcludeNameRegex
 }
 
-$pathModule = Join-Path $PSScriptRoot '..\..\utils\PathUtils.psm1'
+$pathModule = Join-Path $PSScriptRoot '..\..\..\utils\PathUtils.psm1'
 Import-Module $pathModule -Force
 
 $baseInfo = $null
