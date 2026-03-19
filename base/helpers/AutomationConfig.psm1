@@ -183,24 +183,43 @@ function Get-Automations {
 
     $paths = Get-AutomationConfigPaths -AppRoot $AppRoot
 
-    $mergedByAlias = @{}
-    $orderedAliases = @()
+    $mergedByKey = @{}
+    $orderedKeys = @()
+
+    function Get-AutomationMergeKey {
+        param([Parameter(Mandatory = $true)][object]$Entry)
+
+        $alias = if ($Entry.PSObject.Properties.Name -contains 'Alias') { ([string]$Entry.Alias ?? '').Trim() } else { '' }
+
+        $categorySegments = @()
+        if ($Entry.PSObject.Properties.Name -contains 'CategoryPath' -and $Entry.CategoryPath -is [array]) {
+            $categorySegments = @(
+                @($Entry.CategoryPath) |
+                    ForEach-Object { ([string]$_ ?? '').Trim() } |
+                    Where-Object { $_ }
+            )
+        }
+
+        $categoryKey = if ($categorySegments.Count -gt 0) { $categorySegments -join '/' } else { '' }
+        return "{0}|{1}" -f $categoryKey, $alias
+    }
 
     $configs = @($paths.LegacyRoot, $paths.Legacy, $paths.Preferred) | Select-Object -Unique
 
     foreach ($configPath in $configs) {
         $entries = @(Read-AutomationEntriesFromFile -ConfigPath $configPath)
         foreach ($entry in $entries) {
-            if (-not $mergedByAlias.ContainsKey($entry.Alias)) {
-                $orderedAliases += $entry.Alias
+            $entryKey = Get-AutomationMergeKey -Entry $entry
+            if (-not $mergedByKey.ContainsKey($entryKey)) {
+                $orderedKeys += $entryKey
             }
-            $mergedByAlias[$entry.Alias] = $entry
+            $mergedByKey[$entryKey] = $entry
         }
     }
 
     $result = @()
-    foreach ($alias in $orderedAliases) {
-        $result += $mergedByAlias[$alias]
+    foreach ($entryKey in $orderedKeys) {
+        $result += $mergedByKey[$entryKey]
     }
 
     return @($result)
