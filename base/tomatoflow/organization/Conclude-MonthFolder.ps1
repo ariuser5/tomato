@@ -1,12 +1,12 @@
 # -----------------------------------------------------------------------------
-# Conclude-PreviousMonthFolder.ps1
+# Conclude-MonthFolder.ps1
 # -----------------------------------------------------------------------------
-# Concludes the previously open month folder by removing underscore prefix.
+# Concludes the last worked month folder by removing underscore prefix.
 #
 # Behavior:
 #   - Detects month folders that start with underscore (for example _jan-2026).
-#   - Keeps the newest underscored month as the current open month.
-#   - Renames the second newest underscored month by removing leading underscores.
+#   - By default, picks the newest underscored month and concludes it.
+#   - If -TargetFolderName is provided, concludes that specific folder.
 #   - Supports both local filesystem and rclone remote paths.
 # -----------------------------------------------------------------------------
 [CmdletBinding()]
@@ -16,7 +16,10 @@ param(
 
     [Parameter()]
     [ValidateSet('Auto', 'Local', 'Remote')]
-    [string]$PathType = 'Auto'
+    [string]$PathType = 'Auto',
+
+    [Parameter()]
+    [string]$TargetFolderName
 )
 
 $ErrorActionPreference = 'Stop'
@@ -62,35 +65,46 @@ else {
     }
 }
 
-$prefixed = @($existingDirs | Where-Object { $_ -match '^_+[a-z]{3}-\d{4}$' })
-if (-not $prefixed -or $prefixed.Count -lt 2) {
-    Write-Host 'No previous open month to conclude.' -ForegroundColor Yellow
-    Write-Output (New-ToolResult -Status 'NoOp' -Message 'Not enough underscored month folders to conclude a previous month.' -Data @{
-            Path = $baseInfo.Normalized
-            OpenMonthCount = if ($prefixed) { $prefixed.Count } else { 0 }
-        })
-    exit 0
+$explicitTarget = ([string]$TargetFolderName ?? '').Trim()
+$sourceName = ''
+
+if ($explicitTarget) {
+    $sourceName = $explicitTarget
+}
+else {
+    $prefixed = @($existingDirs | Where-Object { $_ -match '^_+[a-z]{3}-\d{4}$' })
+    if (-not $prefixed -or $prefixed.Count -lt 1) {
+        Write-Host 'No open month to conclude.' -ForegroundColor Yellow
+        Write-Output (New-ToolResult -Status 'NoOp' -Message 'No underscored month folders found to conclude.' -Data @{
+                Path = $baseInfo.Normalized
+                OpenMonthCount = if ($prefixed) { $prefixed.Count } else { 0 }
+            })
+        exit 0
+    }
+
+    $monthItems = @(Get-MonthItems -Values $prefixed -SkipInvalid)
+    if (-not $monthItems -or $monthItems.Count -lt 1) {
+        Write-Host 'No valid open month to conclude.' -ForegroundColor Yellow
+        Write-Output (New-ToolResult -Status 'NoOp' -Message 'Could not determine last month from underscored folders.' -Data @{
+                Path = $baseInfo.Normalized
+            })
+        exit 0
+    }
+
+    $sorted = $monthItems | Sort-Object -Property @{ Expression = { $_.Year }; Descending = $true }, @{ Expression = { $_.Month }; Descending = $true }
+    $sourceName = $sorted[0].Value
 }
 
-$monthItems = @(Get-MonthItems -Values $prefixed -SkipInvalid)
-if (-not $monthItems -or $monthItems.Count -lt 2) {
-    Write-Host 'No valid previous open month to conclude.' -ForegroundColor Yellow
-    Write-Output (New-ToolResult -Status 'NoOp' -Message 'Could not determine previous month from underscored folders.' -Data @{
-            Path = $baseInfo.Normalized
-        })
-    exit 0
+if (-not ($existingDirs -contains $sourceName)) {
+    Write-Error "Cannot conclude month '$sourceName': folder not found under '$($baseInfo.Normalized)'."
+    exit 2
 }
 
-$sorted = $monthItems | Sort-Object -Property @{ Expression = { $_.Year }; Descending = $true }, @{ Expression = { $_.Month }; Descending = $true }
-$currentOpen = $sorted[0]
-$previousOpen = $sorted[1]
-
-$sourceName = $previousOpen.Value
 $targetName = $sourceName -replace '^_+', ''
 
 if (-not $targetName -or $targetName -eq $sourceName) {
-    Write-Host 'Previous month folder already concluded.' -ForegroundColor Yellow
-    Write-Output (New-ToolResult -Status 'NoOp' -Message 'Previous month folder does not need rename.' -Data @{
+    Write-Host 'Month folder is already concluded.' -ForegroundColor Yellow
+    Write-Output (New-ToolResult -Status 'NoOp' -Message 'Month folder does not need rename.' -Data @{
             Path = $baseInfo.Normalized
             SourceName = $sourceName
         })
@@ -106,8 +120,7 @@ if ($targetExists) {
 $sourcePath = Join-UnifiedPath -Base $baseInfo.Normalized -Child $sourceName -PathType $baseInfo.PathType
 $targetPath = Join-UnifiedPath -Base $baseInfo.Normalized -Child $targetName -PathType $baseInfo.PathType
 
-Write-Host "Current open month stays: $($currentOpen.Value)" -ForegroundColor Gray
-Write-Host "Concluding previous month: $sourceName -> $targetName" -ForegroundColor Cyan
+Write-Host "Concluding month folder: $sourceName -> $targetName" -ForegroundColor Cyan
 
 if ($baseInfo.PathType -eq 'Remote') {
     try {
@@ -133,7 +146,7 @@ Write-Output (New-ToolResult -Status 'Concluded' -Data @{
         Path = $baseInfo.Normalized
         ConcludedFrom = $sourceName
         ConcludedTo = $targetName
-        CurrentOpen = $currentOpen.Value
+        TargetFolderName = $sourceName
     })
 
 exit 0

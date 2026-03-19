@@ -90,7 +90,7 @@ Setup model:
 
 ### Setup and runtime automations
 - File: tomatoflow/configure/Initialize-Tomatoflow.ps1
-- Purpose: creates or updates one flow definition in local tomatoflow metadata, including per-flow commands for monthly run, preview, ensure month folder, label, archive, draft email, and conclude previous month.
+- Purpose: creates or updates one flow definition in local tomatoflow metadata, including per-flow commands for monthly run, preview, ensure month folder, label, archive, draft email, and conclude month folder.
 
 - File: tomatoflow/configure/List-Tomatoflows.ps1
 - Purpose: lists flows currently configured in local tomatoflow metadata.
@@ -103,6 +103,9 @@ Setup model:
 
 - File: tomatoflow/automations/Create-DraftEmail.ps1
 - Purpose: runs draft-email automation for a configured flow, with optional repository-level override at TOMATO_ROOT/automations/Create-DraftEmail.ps1.
+
+- File: tomatoflow/automations/Conclude-MonthFolder.ps1
+- Purpose: resolves target subfolder for conclude action (ESC-aware prompt, latest-month fallback), then concludes that month folder.
 
 - File: tomatoflow/automations/modules/FlowTargetUtils.psm1
 - Purpose: shared target-folder resolution for flow automations, including latest-month fallback and ESC-aware prompt input.
@@ -121,10 +124,10 @@ Setup model:
 - Typical usage:
   - pwsh -NoProfile -File ./tomatoflow/organization/Create-MonthlyReport.ps1 -Path "gdrive:parties/entity/rapoarte"
 
-- File: tomatoflow/organization/Conclude-PreviousMonthFolder.ps1
-- Purpose: removes underscore prefix from the previous open month folder while keeping current month open.
+- File: tomatoflow/organization/Conclude-MonthFolder.ps1
+- Purpose: removes underscore prefix from the last worked month folder (or an explicit target folder when provided).
 - Typical usage:
-  - pwsh -NoProfile -File ./tomatoflow/organization/Conclude-PreviousMonthFolder.ps1 -Path "gdrive:parties/entity/rapoarte"
+  - pwsh -NoProfile -File ./tomatoflow/organization/Conclude-MonthFolder.ps1 -Path "gdrive:parties/entity/rapoarte"
 
 - File: tomatoflow/organization/Label-Files.ps1
 - Purpose: labels files (for example INVOICE/EXPENSE/BALANCE) for later grouping.

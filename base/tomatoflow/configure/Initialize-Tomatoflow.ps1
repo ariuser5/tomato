@@ -96,7 +96,7 @@ function New-FlowAutomations {
     $labelCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/Label-Files.ps1`" -Path '$escapedPath' -PathType '$Type'"
     $archiveCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/Archive-ByLabel.ps1`" -Path '$escapedPath' -PathType '$Type'"
     $draftCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/Create-DraftEmail.ps1`" -FlowName '$escapedName' -Path '$escapedPath' -PathType '$Type'"
-    $concludeCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/organization/Conclude-PreviousMonthFolder.ps1`" -Path '$escapedPath' -PathType '$Type'"
+    $concludeCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/Conclude-MonthFolder.ps1`" -Path '$escapedPath' -PathType '$Type'"
 
     return @(
         [pscustomobject]@{
@@ -130,7 +130,7 @@ function New-FlowAutomations {
             command = $draftCommand
         },
         [pscustomobject]@{
-            alias = 'Conclude Previous Month'
+            alias = 'Conclude Month Folder'
             categoryPath = $flowCategory
             command = $concludeCommand
         }

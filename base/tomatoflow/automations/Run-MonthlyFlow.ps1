@@ -8,7 +8,7 @@
 #   2) Label files in the newly created month folder.
 #   3) Create archives grouped by labels.
 #   4) Optionally open project-specific draft automation if available.
-#   5) Conclude previous month by removing underscore prefix.
+#   5) Conclude worked month folder by removing underscore prefix.
 # -----------------------------------------------------------------------------
 [CmdletBinding()]
 param(
@@ -38,7 +38,7 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $organizationDir = Join-Path $scriptDir '..\organization'
 
 $createMonthlyReportScript = Join-Path $organizationDir 'Create-MonthlyReport.ps1'
-$concludeScript = Join-Path $organizationDir 'Conclude-PreviousMonthFolder.ps1'
+$concludeScript = Join-Path $organizationDir 'Conclude-MonthFolder.ps1'
 $labelScript = Join-Path $organizationDir 'Label-Files.ps1'
 $archiveScript = Join-Path $organizationDir 'Archive-FilesByLabel.ps1'
 $draftScript = Join-Path $scriptDir 'Create-DraftEmail.ps1'
@@ -200,15 +200,21 @@ else {
     Write-Host '[4/5] Skipped draft email automation.' -ForegroundColor DarkYellow
 }
 
-if (Confirm-StepExecution -Step 5 -Title 'Concluding previous month folder.') {
-    Write-Host '[5/5] Concluding previous month folder...' -ForegroundColor Yellow
-    $step5Output = @(& $concludeScript -Path $Path -PathType $PathType)
+if (Confirm-StepExecution -Step 5 -Title 'Concluding month folder.') {
+    if (-not $currentMonthPath) {
+        Write-Host '[5/5] Skipped concluding month folder: no current month folder could be resolved.' -ForegroundColor DarkYellow
+    }
+    else {
+        Write-Host '[5/5] Concluding month folder...' -ForegroundColor Yellow
+        $targetFolderName = Split-Path -Leaf $currentMonthPath
+        $step5Output = @(& $concludeScript -Path $Path -PathType $PathType -TargetFolderName $targetFolderName)
+    }
     if (Test-NonZeroExitCode -ExitCode $LASTEXITCODE) {
-        throw "Conclude-PreviousMonthFolder failed with exit code $LASTEXITCODE"
+        throw "Conclude-MonthFolder failed with exit code $LASTEXITCODE"
     }
 }
 else {
-    Write-Host '[5/5] Skipped concluding previous month folder.' -ForegroundColor DarkYellow
+    Write-Host '[5/5] Skipped concluding month folder.' -ForegroundColor DarkYellow
 }
 
 Write-Host ''
@@ -233,7 +239,7 @@ Write-Output (New-ToolResult -Status 'Completed' -Data @{
         DraftRequested = $step4Requested
         DraftExecuted = $step4Executed
         DraftSucceeded = $step4Succeeded
-        PreviousMonthResult = @($step5Output)
+        ConcludeMonthFolderResult = @($step5Output)
     })
 
 exit 0

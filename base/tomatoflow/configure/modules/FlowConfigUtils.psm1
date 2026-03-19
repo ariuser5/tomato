@@ -32,7 +32,7 @@ function Get-ManagedFlowAliases {
         'Label Files',
         'Archive By Label',
         'Create Draft Email',
-        'Conclude Previous Month'
+        'Conclude Month Folder'
     )
 }
 
