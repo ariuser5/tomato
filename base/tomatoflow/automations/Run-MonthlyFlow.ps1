@@ -43,6 +43,15 @@ $labelScript = Join-Path $organizationDir 'Label-Files.ps1'
 $archiveScript = Join-Path $organizationDir 'Archive-FilesByLabel.ps1'
 $draftScript = Join-Path $scriptDir 'Create-DraftEmail.ps1'
 
+$pathModule = Join-Path $scriptDir '..\..\utils\PathUtils.psm1'
+Import-Module $pathModule -Force
+
+$monthUtilsModule = Join-Path $organizationDir 'modules\MonthUtils.psm1'
+Import-Module $monthUtilsModule -Force
+
+$commandUtilsModule = Join-Path $scriptDir '..\..\utils\common\CommandUtils.psm1'
+Import-Module $commandUtilsModule -Force
+
 $resultUtilsModule = Join-Path $scriptDir '..\..\utils\common\ResultUtils.psm1'
 Import-Module $resultUtilsModule -Force
 
@@ -73,6 +82,45 @@ function Confirm-StepExecution {
     }
 }
 
+function Resolve-CurrentMonthFolderPath {
+    param(
+        [Parameter(Mandatory = $true)][string]$BasePath,
+        [Parameter(Mandatory = $true)][string]$ResolvedPathType
+    )
+
+    $baseInfo = Resolve-UnifiedPath -Path $BasePath -PathType $ResolvedPathType
+
+    $existingDirs = @()
+    if ($baseInfo.PathType -eq 'Remote') {
+        Assert-RcloneAvailable
+        $existingDirs = @(
+            Invoke-Rclone -Arguments @('lsf', $baseInfo.Normalized, '--dirs-only') -ErrorMessage "Failed to list remote directory '$($baseInfo.Normalized)'."
+        )
+        $existingDirs = @(
+            $existingDirs |
+                Where-Object { $_ -ne $null -and $_ -ne '' } |
+                ForEach-Object { $_.TrimEnd('/') }
+        )
+    }
+    else {
+        if (-not (Test-Path -LiteralPath $baseInfo.LocalPath -PathType Container)) {
+            throw "Storage path does not exist: $($baseInfo.LocalPath)"
+        }
+
+        $existingDirs = @(
+            Get-ChildItem -LiteralPath $baseInfo.LocalPath -Directory -ErrorAction Stop |
+                Select-Object -ExpandProperty Name
+        )
+    }
+
+    $latestMonthName = Get-LastMonthValue -Values $existingDirs -SkipInvalid
+    if (-not $latestMonthName) {
+        return $null
+    }
+
+    return (Join-UnifiedPath -Base $baseInfo.Normalized -Child $latestMonthName -PathType $baseInfo.PathType)
+}
+
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Tomatoflow Monthly Run: $FlowName" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
@@ -80,6 +128,7 @@ Write-Host "Storage: $Path" -ForegroundColor Gray
 Write-Host ''
 
 $createdPath = $null
+$currentMonthPath = $null
 $step1Output = @()
 $step2Output = @()
 $step3Output = @()
@@ -87,6 +136,14 @@ $step4Requested = $false
 $step4Executed = $false
 $step4Succeeded = $false
 $step5Output = @()
+
+$currentMonthPath = Resolve-CurrentMonthFolderPath -BasePath $Path -ResolvedPathType $PathType
+if ($currentMonthPath) {
+    Write-Host "Current month folder before step 1: $currentMonthPath" -ForegroundColor Gray
+}
+else {
+    Write-Host 'Current month folder before step 1: (none found)' -ForegroundColor DarkYellow
+}
 
 if (Confirm-StepExecution -Step 1 -Title 'Creating next month folder and template artifacts.') {
     Write-Host '[1/5] Creating next month folder and template artifacts...' -ForegroundColor Yellow
@@ -107,19 +164,21 @@ if (Confirm-StepExecution -Step 1 -Title 'Creating next month folder and templat
     if (-not $createdPath) {
         throw 'Monthly flow could not determine newly created month folder path.'
     }
+
+    $currentMonthPath = $createdPath
 }
 else {
     Write-Host '[1/5] Skipped creating next month folder and template artifacts.' -ForegroundColor DarkYellow
 }
 
 if (Confirm-StepExecution -Step 2 -Title 'Labeling files in current month folder.') {
-    if (-not $createdPath) {
-        Write-Host '[2/5] Skipped labeling: current month folder path is unavailable because step 1 was skipped.' -ForegroundColor DarkYellow
+    if (-not $currentMonthPath) {
+        Write-Host '[2/5] Skipped labeling: no current month folder could be resolved.' -ForegroundColor DarkYellow
     }
     else {
         Write-Host '[2/5] Labeling files in current month folder...' -ForegroundColor Yellow
         $labelArgs = @{
-            Path = $createdPath
+            Path = $currentMonthPath
             PathType = $PathType
         }
         if ($LabelsFilePath) {
@@ -137,12 +196,12 @@ else {
 }
 
 if (Confirm-StepExecution -Step 3 -Title 'Archiving files by label.') {
-    if (-not $createdPath) {
-        Write-Host '[3/5] Skipped archiving: current month folder path is unavailable because step 1 was skipped.' -ForegroundColor DarkYellow
+    if (-not $currentMonthPath) {
+        Write-Host '[3/5] Skipped archiving: no current month folder could be resolved.' -ForegroundColor DarkYellow
     }
     else {
         Write-Host '[3/5] Archiving files by label...' -ForegroundColor Yellow
-        $step3Output = @(& $archiveScript -Path $createdPath -PathType $PathType)
+        $step3Output = @(& $archiveScript -Path $currentMonthPath -PathType $PathType)
         if ($LASTEXITCODE -ne 0) {
             throw "Archive-FilesByLabel failed with exit code $LASTEXITCODE"
         }
@@ -186,17 +245,18 @@ Write-Host ''
 Write-Host '========================================' -ForegroundColor Green
 Write-Host '✓ Monthly tomatoflow completed' -ForegroundColor Green
 Write-Host '========================================' -ForegroundColor Green
-if ($createdPath) {
-    Write-Host "Current month folder: $createdPath" -ForegroundColor Gray
+if ($currentMonthPath) {
+    Write-Host "Current month folder: $currentMonthPath" -ForegroundColor Gray
 }
 else {
-    Write-Host 'Current month folder: (not created in this run)' -ForegroundColor Gray
+    Write-Host 'Current month folder: (not found)' -ForegroundColor Gray
 }
 
 Write-Output (New-ToolResult -Status 'Completed' -Data @{
         FlowName = $FlowName
         BasePath = $Path
-        CurrentMonthPath = $createdPath
+        CurrentMonthPath = $currentMonthPath
+        CreatedMonthPath = $createdPath
         CreateMonthlyReportResult = @($step1Output)
         LabelResult = @($step2Output)
         ArchiveResult = @($step3Output)
