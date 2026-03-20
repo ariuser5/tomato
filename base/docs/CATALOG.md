@@ -66,6 +66,12 @@ This catalog is the single reference for what the base layer provides and how to
 - Key exports:
   - New-ToolResult
 
+- File: utils/common/TodoEditorUtils.psm1
+- Purpose: shared parsing and error-header helpers for editor todo flows.
+- Key exports:
+  - Read-StructuredTodo
+  - Write-TodoErrorHeader
+
 ### Interactive tooling
 - File: utils/EditorUtils.psm1
 - Purpose: editor selection and blocking wait behavior.
