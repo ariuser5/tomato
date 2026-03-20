@@ -124,7 +124,7 @@ function New-FlowAutomations {
             alias = 'Create Draft Email'
             categoryPath = $flowCategory
             command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Create-DraftEmail.ps1"'
-            args = @('-FlowName', $Name, '-StoragePath', $Path, '-PathType', $Type)
+            args = @('-StoragePath', $Path, '-PathType', $Type)
             cwd = $automationsCwd
         },
         [pscustomobject]@{
