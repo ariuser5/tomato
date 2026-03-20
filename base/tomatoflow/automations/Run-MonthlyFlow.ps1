@@ -13,9 +13,6 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [string]$FlowName,
-
-    [Parameter(Mandatory = $true)]
     [Alias('Path')]
     [string]$StoragePath,
 
@@ -30,7 +27,10 @@ param(
     [string]$NewFolderPrefix = '_',
 
     [Parameter()]
-    [string]$LabelsFilePath
+    [string]$LabelsFilePath,
+
+    [Parameter()]
+    [string]$FlowName
 )
 
 $ErrorActionPreference = 'Stop'
@@ -94,8 +94,25 @@ function Test-NonZeroExitCode {
     return ([int]$ExitCode -ne 0)
 }
 
+function Resolve-FlowName {
+    [CmdletBinding()]
+    param(
+        [Parameter()]
+        [string]$InputName
+    )
+
+    $resolved = ([string]$InputName ?? '').Trim()
+    if ($resolved) {
+        return $resolved
+    }
+
+    return ('tomatoflow-{0}' -f (Get-Date -Format 'yyyyMMdd-HHmmssss'))
+}
+
+$resolvedFlowName = Resolve-FlowName -InputName $FlowName
+
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "Tomatoflow Monthly Run: $FlowName" -ForegroundColor Cyan
+Write-Host "Tomatoflow Monthly Run: $resolvedFlowName" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Storage: $StoragePath" -ForegroundColor Gray
 Write-Host ''
@@ -238,7 +255,7 @@ else {
 }
 
 Write-Output (New-ToolResult -Status 'Completed' -Data @{
-    FlowName = $FlowName
+    FlowName = $resolvedFlowName
     BasePath = $StoragePath
     CurrentMonthPath = $currentMonthPath
     CreatedMonthPath = $createdPath

@@ -12,9 +12,6 @@
 
 [CmdletBinding()]
 param(
-    [Parameter()]
-    [string]$FlowName,
-
     [Parameter(Mandatory = $true)]
     [Alias('Path')]
     [string]$StoragePath,
@@ -42,7 +39,6 @@ $target = Resolve-FlowTargetPath -RootPath $StoragePath -PathType $PathType -Sub
 if ($target.Status -eq 'Aborted') {
     Write-Host 'Draft email action aborted (ESC).' -ForegroundColor DarkYellow
     Write-Output (New-ToolResult -Status 'Aborted' -Data @{
-            FlowName = $FlowName
             RootPath = $StoragePath
             PathType = $PathType
             Action = 'Create Draft Email'
@@ -66,7 +62,6 @@ if ($customDraftScript -and (Test-Path -LiteralPath $customDraftScript -PathType
     Write-Host "Running custom draft automation: $customDraftScript" -ForegroundColor Yellow
 
     $invokeArgs = @{}
-    if ($FlowName) { $invokeArgs.FlowName = $FlowName }
     $invokeArgs.Path = $target.TargetPath
     if ($PathType) { $invokeArgs.PathType = $PathType }
 
@@ -88,7 +83,6 @@ if ($customDraftScript -and (Test-Path -LiteralPath $customDraftScript -PathType
     }
 
     Write-Output (New-ToolResult -Status 'Completed' -Data @{
-            FlowName = $FlowName
             RootPath = $StoragePath
             Path = $target.TargetPath
             Subfolder = $target.SubfolderName
