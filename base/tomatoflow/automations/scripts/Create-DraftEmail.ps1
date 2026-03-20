@@ -5,11 +5,10 @@
 #
 # Expected inputs:
 #   - Path points to the already resolved month folder target.
-#   - RootPath optionally carries the original flow root path for context.
 #
 # Behavior:
 #   - Uses `mailer draft --param-file` with base/resources/mailer-sample.json.
-#   - Enriches param-file context.variables with flow/runtime values.
+#   - Enriches param-file context.variables with TOMATO_ROOT.
 #   - Supports interactive attachment selection from target folder files.
 # -----------------------------------------------------------------------------
 [CmdletBinding()]
@@ -23,9 +22,6 @@ param(
     [Parameter()]
     [ValidateSet('Auto', 'Local', 'Remote')]
     [string]$PathType = 'Auto',
-
-    [Parameter()]
-    [string]$RootPath,
 
     [Parameter()]
     [object]$DefaultAttachmentPatterns
@@ -157,7 +153,11 @@ function New-AttachmentTodoText {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [object[]]$Items
+        [object[]]$Items,
+
+        [Parameter()]
+        [AllowEmptyCollection()]
+        [string[]]$SelectedRelativePaths = @()
     )
 
     $sb = New-Object System.Text.StringBuilder
@@ -172,9 +172,24 @@ function New-AttachmentTodoText {
     $null = $sb.AppendLine('#   reset = regenerate defaults (all y) and reopen editor')
     $null = $sb.AppendLine('#')
 
+    $selectedLookup = @{}
+    foreach ($p in @($SelectedRelativePaths)) {
+        $key = ([string]$p ?? '').Trim().Replace('\\', '/').TrimStart('/')
+        if ($key) {
+            $selectedLookup[$key] = $true
+        }
+    }
+
     foreach ($it in ($Items | Sort-Object RelativePath)) {
-        $escaped = ([string]$it.RelativePath).Replace('\\', '\\\\').Replace('"', '\"')
-        $defaultAction = if (([string]$it.Scope) -eq 'archives') { 'y' } else { 'n' }
+        $relativePath = ([string]$it.RelativePath ?? '').Trim().Replace('\\', '/').TrimStart('/')
+        $escaped = $relativePath.Replace('\\', '\\\\').Replace('"', '\"')
+
+        $isScopeDefaultSelected = (([string]$it.Scope ?? '').Trim().ToLowerInvariant() -eq 'archives')
+        $isExplicitlySelected = $selectedLookup.ContainsKey($relativePath)
+
+        # Keep scope behavior as baseline and overlay explicit selections from pattern matching.
+        $defaultAction = if ($isScopeDefaultSelected -or $isExplicitlySelected) { 'y' } else { 'n' }
+
         $null = $sb.AppendLine($defaultAction + ' "' + $escaped + '"')
     }
 
@@ -384,7 +399,11 @@ function Edit-AttachmentSelection {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [object[]]$Items
+        [object[]]$Items,
+
+        [Parameter()]
+        [AllowEmptyCollection()]
+        [object[]]$SelectedItems = @()
     )
 
     $tmpTodo = Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath ("tomato-draft-attachments-{0}.todo" -f ([guid]::NewGuid().ToString('N')))
@@ -392,10 +411,16 @@ function Edit-AttachmentSelection {
     $todoInitialized = $false
     $regenerateTodo = $true
 
+    $selectedRelativePaths = @(
+        @($SelectedItems) |
+            ForEach-Object { ([string]$_.RelativePath ?? '').Trim() } |
+            Where-Object { $_ }
+    )
+
     try {
         while ($true) {
             if ($regenerateTodo -or -not $todoInitialized) {
-                Set-Content -LiteralPath $tmpTodo -Value (New-AttachmentTodoText -Items $Items) -Encoding UTF8
+                Set-Content -LiteralPath $tmpTodo -Value (New-AttachmentTodoText -Items $Items -SelectedRelativePaths $selectedRelativePaths) -Encoding UTF8
                 $todoInitialized = $true
                 $regenerateTodo = $false
             }
@@ -594,7 +619,7 @@ function Select-Attachments {
         }
 
         if ($choice -eq 'Edit') {
-            $editResult = Edit-AttachmentSelection -Items $items
+            $editResult = Edit-AttachmentSelection -Items $items -SelectedItems $selected
             if ($editResult.Status -eq 'Aborted') {
                 return [pscustomobject]@{ Status = 'Aborted'; Attachments = @(); TempDir = $null; Selected = @() }
             }
@@ -634,9 +659,6 @@ function New-MailerParamFileWithContext {
 
         [Parameter()]
         [string]$FlowName,
-
-        [Parameter()]
-        [string]$RootPath,
 
         [Parameter()]
         [string]$TargetPath,
@@ -684,27 +706,12 @@ function New-MailerParamFileWithContext {
     }
 
     $variables = $payload['context']['variables']
-    if ($FlowName) { $variables['FLOW_NAME'] = $FlowName }
-    if ($RootPath) { $variables['FLOW_ROOT_PATH'] = $RootPath }
-    if ($TargetPath) { $variables['FLOW_TARGET_PATH'] = $TargetPath }
-    if ($PathType) { $variables['FLOW_PATH_TYPE'] = $PathType }
-
-    $targetSubfolder = ''
-    if ($TargetPath) {
-        $targetSubfolder = ([string](Split-Path -Leaf $TargetPath) ?? '').Trim()
-    }
-    if ($targetSubfolder) { $variables['FLOW_SUBFOLDER'] = $targetSubfolder }
     $variables['TOMATO_ROOT'] = ([string]$env:TOMATO_ROOT ?? '')
 
     $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ("tomato-mailer-param-{0}.json" -f ([guid]::NewGuid().ToString('N')))
     $payload | ConvertTo-Json -Depth 15 | Set-Content -LiteralPath $tempPath -Encoding UTF8
 
     return $tempPath
-}
-
-$effectiveRootPath = ([string]$RootPath ?? '').Trim()
-if (-not $effectiveRootPath) {
-    $effectiveRootPath = ([string]$Path ?? '').Trim()
 }
 
 $mailerExe = Get-DefaultMailerExecutable
@@ -727,7 +734,6 @@ try {
     $effectiveParamFile = New-MailerParamFileWithContext `
         -ParamFilePath $baseParamFile `
         -FlowName $FlowName `
-        -RootPath $effectiveRootPath `
         -TargetPath $Path `
         -PathType $PathType
 
@@ -736,7 +742,6 @@ try {
         Write-Host 'Draft email action aborted (ESC).' -ForegroundColor DarkYellow
         Write-Output (New-ToolResult -Status 'Aborted' -Data @{
                 FlowName = $FlowName
-                RootPath = $effectiveRootPath
                 Path = $Path
                 Subfolder = $derivedSubfolder
                 PathType = $PathType
@@ -781,7 +786,6 @@ if ($mailerOutput -and $mailerOutput.Count -gt 0) {
 
 Write-Output (New-ToolResult -Status 'Completed' -Data @{
         FlowName = $FlowName
-        RootPath = $effectiveRootPath
         Path = $Path
         Subfolder = $derivedSubfolder
         PathType = $PathType

@@ -194,7 +194,6 @@ if (Confirm-StepExecution -Step 4 -Title 'Creating draft email automation.') {
             FlowName = $FlowName
             Path = $currentMonthPath
             PathType = $PathType
-            RootPath = $StoragePath
             DefaultAttachmentPatterns = '[Aa]rchives/'
         }
         $null = & $draftScript @draftScriptArgs

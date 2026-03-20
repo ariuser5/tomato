@@ -100,7 +100,6 @@ if ($customDraftScript -and (Test-Path -LiteralPath $customDraftScript -PathType
 
 $invokeScriptArgs = @{
     Path = $target.TargetPath
-    RootPath = $StoragePath
     PathType = $PathType
     DefaultAttachmentPatterns = '[Aa]rchives/'
 }
