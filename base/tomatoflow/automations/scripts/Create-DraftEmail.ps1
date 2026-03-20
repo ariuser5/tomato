@@ -7,7 +7,7 @@
 #   - Path points to the already resolved month folder target.
 #
 # Behavior:
-#   - Uses `mailer draft --param-file` with base/resources/mailer-sample.json.
+#   - Uses `mailer draft --param-file` with the provided -MailerParamFile.
 #   - Enriches param-file context.variables with TOMATO_ROOT.
 #   - Supports interactive attachment selection from target folder files.
 # -----------------------------------------------------------------------------
@@ -19,6 +19,9 @@ param(
     [Parameter()]
     [ValidateSet('Auto', 'Local', 'Remote')]
     [string]$PathType = 'Auto',
+
+    [Parameter(Mandatory = $true)]
+    [string]$MailerParamFile,
 
     [Parameter()]
     [object]$DefaultAttachmentPatterns
@@ -50,19 +53,42 @@ Import-Module $resultUtilsModule -Force
 $flowTargetUtilsModule = Join-Path $PSScriptRoot '..\modules\FlowTargetUtils.psm1'
 Import-Module $flowTargetUtilsModule -Force
 
-function Get-DefaultMailerParamFilePath {
+function Resolve-MailerParamFilePath {
     [CmdletBinding()]
-    param()
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$InputPath
+    )
+
+    $raw = ([string]$InputPath ?? '').Trim()
+    if (-not $raw) {
+        throw 'Mailer parameter file path is required. Pass -MailerParamFile.'
+    }
 
     $tomatoRoot = ([string]$env:TOMATO_ROOT ?? '').Trim()
+
+    $expanded = $raw
     if ($tomatoRoot) {
-        $fromEnv = Join-Path $tomatoRoot 'base\resources\mailer-sample.json'
-        if (Test-Path -LiteralPath $fromEnv -PathType Leaf) {
-            return $fromEnv
+        if ($expanded -like '$env:TOMATO_ROOT/*' -or $expanded -like '$env:TOMATO_ROOT\*') {
+            $suffix = $expanded.Substring('$env:TOMATO_ROOT'.Length).TrimStart('/', [char]'\')
+            $expanded = Join-Path $tomatoRoot $suffix
+        }
+        elseif ($expanded -like '$TOMATO_ROOT/*' -or $expanded -like '$TOMATO_ROOT\*') {
+            $suffix = $expanded.Substring('$TOMATO_ROOT'.Length).TrimStart('/', [char]'\')
+            $expanded = Join-Path $tomatoRoot $suffix
+        }
+        elseif ($expanded -like '%TOMATO_ROOT%/*' -or $expanded -like '%TOMATO_ROOT%\*') {
+            $suffix = $expanded.Substring('%TOMATO_ROOT%'.Length).TrimStart('/', [char]'\')
+            $expanded = Join-Path $tomatoRoot $suffix
         }
     }
 
-    return (Join-Path $PSScriptRoot '..\..\..\resources\mailer-sample.json')
+    if (-not [System.IO.Path]::IsPathRooted($expanded)) {
+        $baseDir = if ($tomatoRoot) { $tomatoRoot } else { (Get-Location).Path }
+        $expanded = Join-Path $baseDir $expanded
+    }
+
+    return [System.IO.Path]::GetFullPath($expanded)
 }
 
 function Get-DefaultMailerExecutable {
@@ -652,13 +678,7 @@ function New-MailerParamFileWithContext {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$ParamFilePath,
-
-        [Parameter()]
-        [string]$TargetPath,
-
-        [Parameter()]
-        [string]$PathType
+        [string]$ParamFilePath
     )
 
     if (-not (Test-Path -LiteralPath $ParamFilePath -PathType Leaf)) {
@@ -713,7 +733,7 @@ if (-not $mailerExe) {
     throw "mailer.exe is required for Create-DraftEmail. Install it (for example via ./scripts/Install-Mailer.ps1 in the Mailer project) and ensure 'mailer' is available on PATH."
 }
 
-$baseParamFile = Get-DefaultMailerParamFilePath
+$baseParamFile = Resolve-MailerParamFilePath -InputPath $MailerParamFile
 $effectiveParamFile = $null
 $mailerOutput = @()
 $attachmentSelection = $null
@@ -726,9 +746,7 @@ if ($Path) {
 
 try {
     $effectiveParamFile = New-MailerParamFileWithContext `
-        -ParamFilePath $baseParamFile `
-        -TargetPath $Path `
-        -PathType $PathType
+        -ParamFilePath $baseParamFile
 
     $attachmentSelection = Select-Attachments -TargetPath $Path -PathType $PathType -DefaultPatterns $DefaultAttachmentPatterns
     if ($attachmentSelection.Status -eq 'Aborted') {

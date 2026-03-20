@@ -30,6 +30,9 @@ param(
     [string]$LabelsFilePath,
 
     [Parameter()]
+    [string]$MailerParamFile,
+
+    [Parameter()]
     [string]$FlowName
 )
 
@@ -109,7 +112,45 @@ function Resolve-FlowName {
     return ('tomatoflow-{0}' -f (Get-Date -Format 'yyyyMMdd-HHmmssss'))
 }
 
+function Resolve-MailerParamFilePath {
+    [CmdletBinding()]
+    param(
+        [Parameter()]
+        [string]$InputPath
+    )
+
+    $raw = ([string]$InputPath ?? '').Trim()
+    if (-not $raw) {
+        return ''
+    }
+
+    $tomatoRoot = ([string]$env:TOMATO_ROOT ?? '').Trim()
+    $expanded = $raw
+    if ($tomatoRoot) {
+        if ($expanded -like '$env:TOMATO_ROOT/*' -or $expanded -like '$env:TOMATO_ROOT\\*') {
+            $suffix = $expanded.Substring('$env:TOMATO_ROOT'.Length).TrimStart('/', [char]'\')
+            $expanded = Join-Path $tomatoRoot $suffix
+        }
+        elseif ($expanded -like '$TOMATO_ROOT/*' -or $expanded -like '$TOMATO_ROOT\\*') {
+            $suffix = $expanded.Substring('$TOMATO_ROOT'.Length).TrimStart('/', [char]'\')
+            $expanded = Join-Path $tomatoRoot $suffix
+        }
+        elseif ($expanded -like '%TOMATO_ROOT%/*' -or $expanded -like '%TOMATO_ROOT%\\*') {
+            $suffix = $expanded.Substring('%TOMATO_ROOT%'.Length).TrimStart('/', [char]'\')
+            $expanded = Join-Path $tomatoRoot $suffix
+        }
+    }
+
+    if (-not [System.IO.Path]::IsPathRooted($expanded)) {
+        $baseDir = if ($tomatoRoot) { $tomatoRoot } else { (Get-Location).Path }
+        $expanded = Join-Path $baseDir $expanded
+    }
+
+    return [System.IO.Path]::GetFullPath($expanded)
+}
+
 $resolvedFlowName = Resolve-FlowName -InputName $FlowName
+$resolvedMailerParamFile = Resolve-MailerParamFilePath -InputPath $MailerParamFile
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Tomatoflow Monthly Run: $resolvedFlowName" -ForegroundColor Cyan
@@ -204,11 +245,21 @@ else {
 if (Confirm-StepExecution -Step 4 -Title 'Creating draft email automation.') {
     $step4Requested = $true
     if (Test-Path -LiteralPath $draftScript -PathType Leaf) {
+        if (-not $resolvedMailerParamFile) {
+            Write-Host '[4/5] Skipped draft email automation: missing -MailerParamFile.' -ForegroundColor DarkYellow
+            Write-Host "      To restore this step, configure a valid mailer param file in automation args, for example: -MailerParamFile '`$TOMATO_ROOT/base/resources/mailer-sample.json'." -ForegroundColor DarkYellow
+        }
+        elseif (-not (Test-Path -LiteralPath $resolvedMailerParamFile -PathType Leaf)) {
+            Write-Host "[4/5] Skipped draft email automation: param file not found: $resolvedMailerParamFile" -ForegroundColor DarkYellow
+            Write-Host "      To restore this step, update -MailerParamFile to an existing file (for example '`$TOMATO_ROOT/base/resources/mailer-sample.json')." -ForegroundColor DarkYellow
+        }
+        else {
         Write-Host '[4/5] Creating draft email automation...' -ForegroundColor Yellow
         $step4Executed = $true
         $targetSubfolderName = if ($currentMonthPath) { Split-Path -Leaf $currentMonthPath } else { $null }
         $draftScriptArgs = @{
             Path = $currentMonthPath
+            MailerParamFile = $resolvedMailerParamFile
             PathType = $PathType
             DefaultAttachmentPatterns = '[Aa]rchives/'
         }
@@ -217,6 +268,7 @@ if (Confirm-StepExecution -Step 4 -Title 'Creating draft email automation.') {
             throw "Create-DraftEmail failed with exit code $LASTEXITCODE"
         }
         $step4Succeeded = $true
+        }
     }
     else {
         Write-Host '[4/5] Skipped draft email automation: script is not configured in this repository yet.' -ForegroundColor DarkYellow

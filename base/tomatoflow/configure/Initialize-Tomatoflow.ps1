@@ -83,13 +83,14 @@ function New-FlowAutomations {
 
     $automationsCwd = '$env:TOMATO_ROOT/base/tomatoflow/automations'
     $scriptsCwd = '$env:TOMATO_ROOT/base/tomatoflow/automations/scripts'
+    $defaultMailerParamFile = '$TOMATO_ROOT/base/resources/mailer-sample.json'
 
     return @(
         [pscustomobject]@{
             alias = 'Run Monthly Flow'
             categoryPath = $flowCategory
             command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Run-MonthlyFlow.ps1"'
-            args = @('-FlowName', $Name, '-StoragePath', $Path, '-PathType', $Type)
+            args = @('-FlowName', $Name, '-StoragePath', $Path, '-PathType', $Type, '-MailerParamFile', $defaultMailerParamFile)
             cwd = $automationsCwd
         },
         [pscustomobject]@{
@@ -124,7 +125,7 @@ function New-FlowAutomations {
             alias = 'Create Draft Email'
             categoryPath = $flowCategory
             command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Create-DraftEmail.ps1"'
-            args = @('-StoragePath', $Path, '-PathType', $Type)
+            args = @('-StoragePath', $Path, '-PathType', $Type, '-MailerParamFile', $defaultMailerParamFile)
             cwd = $automationsCwd
         },
         [pscustomobject]@{

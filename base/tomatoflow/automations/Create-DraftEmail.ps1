@@ -16,6 +16,9 @@ param(
     [Alias('Path')]
     [string]$StoragePath,
 
+    [Parameter(Mandatory = $true)]
+    [string]$MailerParamFile,
+
     [Parameter()]
     [ValidateSet('Auto', 'Local', 'Remote')]
     [string]$PathType = 'Auto',
@@ -40,6 +43,7 @@ if ($target.Status -eq 'Aborted') {
     Write-Host 'Draft email action aborted (ESC).' -ForegroundColor DarkYellow
     Write-Output (New-ToolResult -Status 'Aborted' -Data @{
             RootPath = $StoragePath
+            MailerParamFile = $MailerParamFile
             PathType = $PathType
             Action = 'Create Draft Email'
         })
@@ -63,6 +67,7 @@ if ($customDraftScript -and (Test-Path -LiteralPath $customDraftScript -PathType
 
     $invokeArgs = @{}
     $invokeArgs.Path = $target.TargetPath
+    $invokeArgs.MailerParamFile = $MailerParamFile
     if ($PathType) { $invokeArgs.PathType = $PathType }
 
     $invocationOutput = $null
@@ -84,6 +89,7 @@ if ($customDraftScript -and (Test-Path -LiteralPath $customDraftScript -PathType
 
     Write-Output (New-ToolResult -Status 'Completed' -Data @{
             RootPath = $StoragePath
+            MailerParamFile = $MailerParamFile
             Path = $target.TargetPath
             Subfolder = $target.SubfolderName
             PathType = $PathType
@@ -94,6 +100,7 @@ if ($customDraftScript -and (Test-Path -LiteralPath $customDraftScript -PathType
 
 $invokeScriptArgs = @{
     Path = $target.TargetPath
+    MailerParamFile = $MailerParamFile
     PathType = $PathType
     DefaultAttachmentPatterns = '[Aa]rchives/'
 }
