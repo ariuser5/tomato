@@ -103,6 +103,5 @@ $invokeScriptArgs = @{
     PathType = $PathType
     DefaultAttachmentPatterns = '[Aa]rchives/'
 }
-if ($FlowName) { $invokeScriptArgs.FlowName = $FlowName }
 
 & $targetScript @invokeScriptArgs

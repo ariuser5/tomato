@@ -13,9 +13,6 @@
 # -----------------------------------------------------------------------------
 [CmdletBinding()]
 param(
-    [Parameter()]
-    [string]$FlowName,
-
     [Parameter(Mandatory = $true)]
     [string]$Path,
 
@@ -658,9 +655,6 @@ function New-MailerParamFileWithContext {
         [string]$ParamFilePath,
 
         [Parameter()]
-        [string]$FlowName,
-
-        [Parameter()]
         [string]$TargetPath,
 
         [Parameter()]
@@ -733,7 +727,6 @@ if ($Path) {
 try {
     $effectiveParamFile = New-MailerParamFileWithContext `
         -ParamFilePath $baseParamFile `
-        -FlowName $FlowName `
         -TargetPath $Path `
         -PathType $PathType
 
@@ -741,7 +734,6 @@ try {
     if ($attachmentSelection.Status -eq 'Aborted') {
         Write-Host 'Draft email action aborted (ESC).' -ForegroundColor DarkYellow
         Write-Output (New-ToolResult -Status 'Aborted' -Data @{
-                FlowName = $FlowName
                 Path = $Path
                 Subfolder = $derivedSubfolder
                 PathType = $PathType
@@ -785,7 +777,6 @@ if ($mailerOutput -and $mailerOutput.Count -gt 0) {
 }
 
 Write-Output (New-ToolResult -Status 'Completed' -Data @{
-        FlowName = $FlowName
         Path = $Path
         Subfolder = $derivedSubfolder
         PathType = $PathType
