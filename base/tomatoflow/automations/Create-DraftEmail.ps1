@@ -177,6 +177,83 @@ function New-AttachmentTodoText {
     return $sb.ToString()
 }
 
+function Read-ConfirmationChoice {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$PromptText,
+
+        [Parameter(Mandatory = $true)]
+        [string[]]$Choices,
+
+        [Parameter(Mandatory = $true)]
+        [string]$DefaultChoice
+    )
+
+    $normalizedChoices = @($Choices | ForEach-Object { ([string]$_ ?? '').Trim() } | Where-Object { $_ })
+    if (-not $normalizedChoices -or $normalizedChoices.Count -eq 0) {
+        throw 'Read-ConfirmationChoice requires at least one choice.'
+    }
+
+    $defaultCanonical = ($DefaultChoice ?? '').Trim()
+    if ($normalizedChoices -notcontains $defaultCanonical) {
+        throw "Default choice '$DefaultChoice' is not in choices list."
+    }
+
+    $byLower = @{}
+    foreach ($choice in $normalizedChoices) {
+        $choiceLower = $choice.ToLowerInvariant()
+        if (-not $byLower.ContainsKey($choiceLower)) {
+            $byLower[$choiceLower] = $choice
+        }
+    }
+
+    # Allow single-char shortcuts only when unambiguous across options.
+    $charCounts = @{}
+    foreach ($choice in $normalizedChoices) {
+        $key = $choice.Substring(0, 1).ToLowerInvariant()
+        if (-not $charCounts.ContainsKey($key)) {
+            $charCounts[$key] = 0
+        }
+        $charCounts[$key]++
+    }
+
+    $shortcuts = @{}
+    foreach ($choice in $normalizedChoices) {
+        $key = $choice.Substring(0, 1).ToLowerInvariant()
+        if ($charCounts[$key] -eq 1) {
+            $shortcuts[$key] = $choice
+        }
+    }
+
+    $optionsText = ($normalizedChoices -join '/')
+    $prompt = "{0} [{1}] (default: {2})" -f $PromptText, $optionsText, $defaultCanonical
+
+    while ($true) {
+        $response = Read-InputWithEsc -Prompt $prompt
+        if ($response.Status -eq 'Escaped') {
+            return [pscustomobject]@{ Status = 'Aborted'; Choice = $null }
+        }
+
+        $raw = ([string]$response.Value ?? '').Trim()
+        if (-not $raw) {
+            return [pscustomobject]@{ Status = 'Selected'; Choice = $defaultCanonical }
+        }
+
+        $value = $raw.ToLowerInvariant()
+
+        if ($byLower.ContainsKey($value)) {
+            return [pscustomobject]@{ Status = 'Selected'; Choice = $byLower[$value] }
+        }
+
+        if ($shortcuts.ContainsKey($value)) {
+            return [pscustomobject]@{ Status = 'Selected'; Choice = $shortcuts[$value] }
+        }
+
+        Write-Host "Unrecognized input '$raw'. Allowed values: $optionsText" -ForegroundColor DarkYellow
+    }
+}
+
 function Read-AttachmentTodo {
     [CmdletBinding()]
     param(
@@ -468,22 +545,22 @@ function Select-Attachments {
             }
         }
 
-        $confirm = Read-InputWithEsc -Prompt "Proceed with these attachments? [Y/n/edit/abort]"
-        if ($confirm.Status -eq 'Escaped') {
+        $confirm = Read-ConfirmationChoice -PromptText 'Proceed with these attachments?' -Choices @('Yes', 'No', 'Edit', 'Abort') -DefaultChoice 'Yes'
+        if ($confirm.Status -eq 'Aborted') {
             return [pscustomobject]@{ Status = 'Aborted'; Attachments = @(); TempDir = $null; Selected = @() }
         }
 
-        $choice = ([string]$confirm.Value ?? '').Trim().ToLowerInvariant()
-        if (-not $choice -or $choice -in @('y', 'yes')) {
+        $choice = [string]$confirm.Choice
+        if ($choice -eq 'Yes') {
             break
         }
 
-        if ($choice -in @('n', 'no')) {
+        if ($choice -eq 'No') {
             $selected = @()
             break
         }
 
-        if ($choice -eq 'edit') {
+        if ($choice -eq 'Edit') {
             $editResult = Edit-AttachmentSelection -Items $items
             if ($editResult.Status -eq 'Aborted') {
                 return [pscustomobject]@{ Status = 'Aborted'; Attachments = @(); TempDir = $null; Selected = @() }
@@ -493,11 +570,9 @@ function Select-Attachments {
             break
         }
 
-        if ($choice -eq 'abort') {
+        if ($choice -eq 'Abort') {
             return [pscustomobject]@{ Status = 'Aborted'; Attachments = @(); TempDir = $null; Selected = @() }
         }
-
-        Write-Host "Unrecognized input '$choice'. Use Y, n, edit, or abort." -ForegroundColor DarkYellow
     }
 
     if ($discovery.PathInfo.PathType -eq 'Remote') {

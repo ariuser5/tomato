@@ -61,18 +61,20 @@ function Confirm-StepExecution {
         [Parameter(Mandatory = $true)][string]$Title
     )
 
+    $prompt = "[{0}/5] {1} Proceed with this step? [Yes/No] (default: Yes)" -f $Step, $Title
+
     while ($true) {
-        $answer = Read-Host ("[{0}/5] {1} Proceed with this step? [Y/n]" -f $Step, $Title)
+        $answer = Read-Host $prompt
         $choice = ([string]$answer ?? '').Trim().ToLowerInvariant()
 
         if (-not $choice -or $choice -eq 'y' -or $choice -eq 'yes') {
             return $true
         }
-        if ($choice -eq 'n' -or $choice -eq 'no' -or $choice -eq 's' -or $choice -eq 'skip') {
+        if ($choice -eq 'n' -or $choice -eq 'no') {
             return $false
         }
 
-        Write-Host "Please answer y (proceed) or n (skip)." -ForegroundColor Yellow
+        Write-Host "Please answer Yes or No." -ForegroundColor Yellow
     }
 }
 
