@@ -82,7 +82,6 @@ function New-FlowAutomations {
     $flowCategory = @($Name)
 
     $automationsCwd = '$env:TOMATO_ROOT/base/tomatoflow/automations'
-    $scriptsCwd = '$env:TOMATO_ROOT/base/tomatoflow/automations/scripts'
     $defaultMailerParamFile = '$TOMATO_ROOT/base/resources/mailer-sample.json'
 
     return @(
@@ -96,43 +95,74 @@ function New-FlowAutomations {
         [pscustomobject]@{
             alias = 'Preview Storage'
             categoryPath = $flowCategory
-            command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Preview-Location.ps1"'
-            args = @('-StoragePath', $Path)
+            command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Run-SingleScript.ps1"'
+            args = @(
+                '-ScriptPath', '$env:TOMATO_ROOT/base/utils/Preview-Location.ps1',
+                '-PRoot', $Path,
+                '-PNavigator', 'auto',
+                '-PMaxDepth', '0',
+                '-PTitle', 'Preview'
+            )
             cwd = $automationsCwd
         },
         [pscustomobject]@{
             alias = 'Ensure New Month Folder'
             categoryPath = $flowCategory
-            command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Ensure-NewMonthFolder.ps1"'
-            args = @('-StoragePath', $Path, '-PathType', $Type)
+            command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Run-SingleScript.ps1"'
+            args = @(
+                '-ScriptPath', 'Ensure-NewMonthFolder.ps1',
+                '-PPath', $Path,
+                '-PPathType', $Type
+            )
             cwd = $automationsCwd
         },
         [pscustomobject]@{
             alias = 'Label Files'
             categoryPath = $flowCategory
-            command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Label-Files.ps1"'
-            args = @('-StoragePath', $Path, '-PathType', $Type)
+            command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Run-SingleScript.ps1"'
+            args = @(
+                '-ScriptPath', 'Label-Files.ps1',
+                '-PStoragePath', $Path,
+                '-PPathType', $Type,
+                '-PSubfolder', '$Prompt'
+            )
             cwd = $automationsCwd
         },
         [pscustomobject]@{
             alias = 'Archive By Label'
             categoryPath = $flowCategory
-            command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Archive-ByLabel.ps1"'
-            args = @('-StoragePath', $Path, '-PathType', $Type)
+            command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Run-SingleScript.ps1"'
+            args = @(
+                '-ScriptPath', 'Archive-ByLabel.ps1',
+                '-PStoragePath', $Path,
+                '-PPathType', $Type,
+                '-PSubfolder', '$Prompt'
+            )
             cwd = $automationsCwd
         },
         [pscustomobject]@{
             alias = 'Create Draft Email'
             categoryPath = $flowCategory
-            command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Create-DraftEmail.ps1"'
-            args = @('-StoragePath', $Path, '-PathType', $Type, '-MailerParamFile', $defaultMailerParamFile)
+            command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Run-SingleScript.ps1"'
+            args = @(
+                '-ScriptPath', 'Create-DraftEmail.ps1',
+                '-PStoragePath', $Path,
+                '-PPathType', $Type,
+                '-PSubfolder', '$Prompt',
+                '-PMailerParamFile', $defaultMailerParamFile
+            )
             cwd = $automationsCwd
         },
         [pscustomobject]@{
             alias = 'Conclude Month Folder'
             categoryPath = $flowCategory
-            command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Conclude-MonthFolder.ps1"'
-            args = @('-StoragePath', $Path, '-PathType', $Type)
+            command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Run-SingleScript.ps1"'
+            args = @(
+                '-ScriptPath', 'Conclude-MonthFolder.ps1',
+                '-PStoragePath', $Path,
+                '-PPathType', $Type,
+                '-PSubfolder', '$Prompt'
+            )
             cwd = $automationsCwd
         }
     )

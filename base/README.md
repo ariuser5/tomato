@@ -26,6 +26,7 @@ It is intentionally generic and party-oriented:
 Tomatoflow package layout:
 - `tomatoflow/automations.json`: default tomatoflow automation entries.
 - `tomatoflow/configure/`: setup and configuration management scripts.
+- `tomatoflow/automations/Run-SingleScript.ps1`: generic top-level automation wrapper for single-script actions.
 - `tomatoflow/automations/scripts/`: Tomatoflow building-block scripts.
 - `tomatoflow/automations/scripts/modules/`: reusable Tomatoflow-specific modules.
 
@@ -34,7 +35,7 @@ Tomatoflow runtime model:
 - Setup automation writes per-user flow metadata file to `%LOCALAPPDATA%/tomato/tomatoflow-meta.json`.
 - Configured flow folders are shown at top-level, alongside `tomatoflow-setup`.
 - Flow command entries from that local file are imported at runtime (`alias`, `categoryPath`, `command`, optional `args`, optional `cwd`).
-- Each configured flow gets runnable entries for monthly run, preview, ensure month folder, label files, archive by label, create draft email, and conclude month folder.
+- Each configured flow gets runnable entries for monthly run plus single-action entries routed through `Run-SingleScript.ps1` (preview, ensure month folder, label files, archive by label, create draft email, conclude month folder).
 - This keeps base repository defaults clean while enabling local flow provisioning.
 
 ## Capability catalog

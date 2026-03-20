@@ -11,7 +11,7 @@ This catalog is the single reference for what the base layer provides and how to
 
 ## External prerequisites
 - `rclone` is required for any remote path usage (for example `gdrive:...`).
-- `mailer` is required by `tomatoflow/automations/Create-DraftEmail.ps1`.
+- `mailer` is required by `tomatoflow/automations/scripts/Create-DraftEmail.ps1`.
 
 ### Root app entrypoint
 - File: ../Start-Main.ps1 (repo root)
@@ -122,11 +122,11 @@ Setup model:
 - File: tomatoflow/automations/Run-MonthlyFlow.ps1
 - Purpose: runs the unified monthly flow for a configured storage path.
 
-- File: tomatoflow/automations/Create-DraftEmail.ps1
-- Purpose: creates a Gmail draft via `mailer draft --param-file` using `base/resources/mailer-sample.json`, with optional repository-level override at TOMATO_ROOT/automations/Create-DraftEmail.ps1.
+- File: tomatoflow/automations/Run-SingleScript.ps1
+- Purpose: generic top-level wrapper for single-action scripts; forwards `-P*` args as target-script parameters.
+- Prompt marker: pass `'$Prompt'` to `-PSubfolder` or `-PTargetFolderName` to trigger interactive month-subfolder selection.
 
-- File: tomatoflow/automations/Conclude-MonthFolder.ps1
-- Purpose: resolves target subfolder for conclude action (ESC-aware prompt, latest-month fallback), then concludes that month folder.
+- Note: flow setup now provisions single-action menu entries (Preview Storage, Ensure New Month Folder, Label Files, Archive By Label, Create Draft Email, Conclude Month Folder) through `tomatoflow/automations/Run-SingleScript.ps1` while preserving the same aliases and prompt behavior.
 
 - File: tomatoflow/automations/modules/FlowTargetUtils.psm1
 - Purpose: shared target-folder resolution for flow automations, including latest-month fallback and ESC-aware prompt input.
