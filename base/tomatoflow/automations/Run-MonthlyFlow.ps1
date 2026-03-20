@@ -41,7 +41,7 @@ $createMonthlyReportScript = Join-Path $scriptsDir 'Create-MonthlyReport.ps1'
 $concludeScript = Join-Path $scriptsDir 'Conclude-MonthFolder.ps1'
 $labelScript = Join-Path $scriptsDir 'Label-Files.ps1'
 $archiveScript = Join-Path $scriptsDir 'Archive-ByLabel.ps1'
-$draftScript = Join-Path $scriptDir 'Create-DraftEmail.ps1'
+$draftScript = Join-Path $scriptsDir 'Create-DraftEmail.ps1'
 
 $flowTargetUtilsModule = Join-Path $scriptDir '.\modules\FlowTargetUtils.psm1'
 Import-Module $flowTargetUtilsModule -Force
@@ -188,7 +188,16 @@ if (Confirm-StepExecution -Step 4 -Title 'Creating draft email automation.') {
     if (Test-Path -LiteralPath $draftScript -PathType Leaf) {
         Write-Host '[4/5] Creating draft email automation...' -ForegroundColor Yellow
         $step4Executed = $true
-        $null = & $draftScript -FlowName $FlowName -Path $currentMonthPath -PathType $PathType
+        $targetSubfolderName = if ($currentMonthPath) { Split-Path -Leaf $currentMonthPath } else { $null }
+        $draftScriptArgs = @{
+            FlowName = $FlowName
+            Path = $currentMonthPath
+            PathType = $PathType
+            RootPath = $Path
+            Subfolder = $targetSubfolderName
+            DefaultAttachmentPatterns = '[Aa]rchives/'
+        }
+        $null = & $draftScript @draftScriptArgs
         if (Test-NonZeroExitCode -ExitCode $LASTEXITCODE) {
             throw "Create-DraftEmail failed with exit code $LASTEXITCODE"
         }
@@ -231,17 +240,17 @@ else {
 }
 
 Write-Output (New-ToolResult -Status 'Completed' -Data @{
-        FlowName = $FlowName
-        BasePath = $Path
-        CurrentMonthPath = $currentMonthPath
-        CreatedMonthPath = $createdPath
-        CreateMonthlyReportResult = @($step1Output)
-        LabelResult = @($step2Output)
-        ArchiveResult = @($step3Output)
-        DraftRequested = $step4Requested
-        DraftExecuted = $step4Executed
-        DraftSucceeded = $step4Succeeded
-        ConcludeMonthFolderResult = @($step5Output)
-    })
+    FlowName = $FlowName
+    BasePath = $Path
+    CurrentMonthPath = $currentMonthPath
+    CreatedMonthPath = $createdPath
+    CreateMonthlyReportResult = @($step1Output)
+    LabelResult = @($step2Output)
+    ArchiveResult = @($step3Output)
+    DraftRequested = $step4Requested
+    DraftExecuted = $step4Executed
+    DraftSucceeded = $step4Succeeded
+    ConcludeMonthFolderResult = @($step5Output)
+})
 
 exit 0
