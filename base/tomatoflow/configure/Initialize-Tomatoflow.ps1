@@ -149,7 +149,8 @@ function New-FlowAutomations {
                 '-PStoragePath', $Path,
                 '-PPathType', $Type,
                 '-PPath', '$Prompt',
-                '-PMailerParamFile', $defaultMailerParamFile
+                '-PMailerParamFile', $defaultMailerParamFile,
+                '-PDefaultAttachmentPatterns', '[Aa]rchives/'
             )
             cwd = $automationsCwd
         },
