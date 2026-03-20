@@ -70,12 +70,6 @@ function Read-MetadataConfig {
     return [pscustomobject]@{ automations = @($parsed.automations) }
 }
 
-function Escape-SingleQuotedValue {
-    param([Parameter(Mandatory = $true)][string]$Value)
-
-    return $Value.Replace("'", "''")
-}
-
 function New-FlowAutomations {
     [CmdletBinding()]
     param(
@@ -84,55 +78,61 @@ function New-FlowAutomations {
         [Parameter(Mandatory = $true)][string]$Type
     )
 
-    $escapedName = Escape-SingleQuotedValue -Value $Name
-    $escapedPath = Escape-SingleQuotedValue -Value $Path
-
     # Flow folders are top-level peers of "tomatoflow-setup" in the automation menu.
     $flowCategory = @($Name)
 
-    $runFlowCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/Run-MonthlyFlow.ps1`" -FlowName '$escapedName' -Path '$escapedPath' -PathType '$Type'"
-    $previewCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/Preview-Location.ps1`" -Root '$escapedPath'"
-    $ensureCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/scripts/Ensure-NewMonthFolder.ps1`" -Path '$escapedPath' -PathType '$Type'"
-    $labelCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/Label-Files.ps1`" -Path '$escapedPath' -PathType '$Type'"
-    $archiveCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/Archive-ByLabel.ps1`" -Path '$escapedPath' -PathType '$Type'"
-    $draftCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/Create-DraftEmail.ps1`" -FlowName '$escapedName' -Path '$escapedPath' -PathType '$Type'"
-    $concludeCommand = "& `"`$env:TOMATO_ROOT/base/tomatoflow/automations/Conclude-MonthFolder.ps1`" -Path '$escapedPath' -PathType '$Type'"
+    $automationsCwd = '$env:TOMATO_ROOT/base/tomatoflow/automations'
+    $scriptsCwd = '$env:TOMATO_ROOT/base/tomatoflow/automations/scripts'
 
     return @(
         [pscustomobject]@{
             alias = 'Run Monthly Flow'
             categoryPath = $flowCategory
-            command = $runFlowCommand
+            command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Run-MonthlyFlow.ps1"'
+            args = @('-FlowName', $Name, '-Path', $Path, '-PathType', $Type)
+            cwd = $automationsCwd
         },
         [pscustomobject]@{
             alias = 'Preview Storage'
             categoryPath = $flowCategory
-            command = $previewCommand
+            command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Preview-Location.ps1"'
+            args = @('-Root', $Path)
+            cwd = $automationsCwd
         },
         [pscustomobject]@{
             alias = 'Ensure New Month Folder'
             categoryPath = $flowCategory
-            command = $ensureCommand
+            command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/scripts/Ensure-NewMonthFolder.ps1"'
+            args = @('-Path', $Path, '-PathType', $Type)
+            cwd = $scriptsCwd
         },
         [pscustomobject]@{
             alias = 'Label Files'
             categoryPath = $flowCategory
-            command = $labelCommand
+            command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Label-Files.ps1"'
+            args = @('-Path', $Path, '-PathType', $Type)
+            cwd = $automationsCwd
         },
         [pscustomobject]@{
             alias = 'Archive By Label'
             categoryPath = $flowCategory
-            command = $archiveCommand
+            command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Archive-ByLabel.ps1"'
+            args = @('-Path', $Path, '-PathType', $Type)
+            cwd = $automationsCwd
         },
         [pscustomobject]@{
             alias = 'Create Draft Email'
             categoryPath = $flowCategory
-            command = $draftCommand
+            command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Create-DraftEmail.ps1"'
+            args = @('-FlowName', $Name, '-Path', $Path, '-PathType', $Type)
+            cwd = $automationsCwd
         },
         [pscustomobject]@{
             alias = 'Conclude Month Folder'
             categoryPath = $flowCategory
-            command = $concludeCommand
+            command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Conclude-MonthFolder.ps1"'
+            args = @('-Path', $Path, '-PathType', $Type)
+            cwd = $automationsCwd
         }
     )
 }

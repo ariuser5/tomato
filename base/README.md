@@ -33,7 +33,7 @@ Tomatoflow runtime model:
 - Fresh clone shows only setup automations under `tomatoflow-setup`.
 - Setup automation writes per-user flow metadata file to `%LOCALAPPDATA%/tomato/tomatoflow-meta.json`.
 - Configured flow folders are shown at top-level, alongside `tomatoflow-setup`.
-- Flow command entries from that local file are imported at runtime.
+- Flow command entries from that local file are imported at runtime (`alias`, `categoryPath`, `command`, optional `args`, optional `cwd`).
 - Each configured flow gets runnable entries for monthly run, preview, ensure month folder, label files, archive by label, create draft email, and conclude month folder.
 - This keeps base repository defaults clean while enabling local flow provisioning.
 

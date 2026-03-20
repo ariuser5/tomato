@@ -5,10 +5,10 @@ AutomationConfig.psm1
 Shared helpers for entity automation command config.
 
 Responsibilities:
-    - Resolve config file path
-  - Parse/validate config JSON entries
-    - Build merged automation entries
-  - Execute automation commands
+- Resolve config file path
+- Parse/validate config JSON entries
+- Build merged automation entries
+- Execute automation commands (including optional args/cwd)
 
 Exported functions:
   - Get-AutomationConfigPaths
@@ -160,10 +160,45 @@ function Read-AutomationEntriesFromFile {
                 $categoryPath += $segmentText
             }
 
+            $commandArgs = @()
+            if ($entry.PSObject.Properties.Name -contains 'args') {
+                if (-not ($entry.args -is [array])) {
+                    Write-Warning "Skipping automation '$alias' in '$resolvedPath': args must be an array of strings."
+                    continue
+                }
+
+                foreach ($arg in @($entry.args)) {
+                    if ($null -eq $arg) { continue }
+                    $commandArgs += [string]$arg
+                }
+            }
+
+            $entryWorkingDirectory = ''
+            if ($entry.PSObject.Properties.Name -contains 'cwd') {
+                $cwdValue = ([string]$entry.cwd ?? '').Trim()
+                if ($cwdValue) {
+                    try {
+                        $cwdValue = $ExecutionContext.InvokeCommand.ExpandString($cwdValue)
+                    } catch {
+                        $cwdValue = ''
+                    }
+
+                    if ($cwdValue) {
+                        $entryWorkingDirectory = if ([System.IO.Path]::IsPathRooted($cwdValue)) {
+                            $cwdValue
+                        } else {
+                            Join-Path -Path $baseDir -ChildPath $cwdValue
+                        }
+                    }
+                }
+            }
+
             $result += [pscustomobject]@{
                 Name         = $alias
                 Alias        = $alias
                 Command      = $command
+                Args         = @($commandArgs)
+                Cwd          = $entryWorkingDirectory
                 CategoryPath = @($categoryPath)
                 Source       = $resolvedPath
             }
@@ -231,7 +266,8 @@ function Invoke-AutomationCommand {
         [Parameter(Mandatory = $true)][string]$Alias,
         [Parameter(Mandatory = $true)][string]$Command,
         [Parameter(Mandatory = $true)][string]$AppRoot,
-        [Parameter()][string]$WorkingDirectory
+        [Parameter()][string]$WorkingDirectory,
+        [Parameter()][AllowNull()][AllowEmptyCollection()][string[]]$CommandArgs
     )
 
     $tomatoRoot = Split-Path $AppRoot -Parent
@@ -251,12 +287,33 @@ function Invoke-AutomationCommand {
     $previousLocation = Get-Location
     $previousLastExitCode = $global:LASTEXITCODE
 
+    $effectiveCommand = $Command
+    if ($CommandArgs -and $CommandArgs.Count -gt 0) {
+        $escapedArgs = @(
+            $CommandArgs |
+                ForEach-Object {
+                    $argValue = [string]($_ ?? '')
+
+                    # Keep parameter/switch tokens unquoted so PowerShell can bind named parameters.
+                    if ($argValue -match '^-{1,2}[A-Za-z_][A-Za-z0-9_-]*(?::)?$') {
+                        return $argValue
+                    }
+
+                    "'{0}'" -f $argValue.Replace("'", "''")
+                }
+        )
+
+        if ($escapedArgs.Count -gt 0) {
+            $effectiveCommand = "{0} {1}" -f $Command, ($escapedArgs -join ' ')
+        }
+    }
+
     try {
         Set-Location -LiteralPath $effectiveWorkingDirectory
         $global:LASTEXITCODE = $null
 
         # Execute in-process so interactive scripts can use the active console host.
-        Invoke-Expression $Command
+        Invoke-Expression $effectiveCommand
 
         if ($null -ne $LASTEXITCODE) {
             return $LASTEXITCODE

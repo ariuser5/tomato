@@ -8,7 +8,7 @@
 - The repository root is intentionally kept open for extender/custom overlays that should not be part of the base image.
 
 ## Automation Conventions
-- Keep automation commands compatible with `base/helpers/AutomationConfig.psm1` expectations (`alias` + `command`).
+- Keep automation commands compatible with `base/helpers/AutomationConfig.psm1` expectations (`alias` + `command`, with optional `args` and `cwd`).
 - Assume `Start-Main.ps1` sets these env vars before running automations:
   - `TOMATO_ROOT`
   - `BASE_DIR`

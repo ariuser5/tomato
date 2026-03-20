@@ -65,6 +65,23 @@ function Parse-StoragePathFromCommand {
     return ''
 }
 
+function Parse-StoragePathFromEntry {
+    param([Parameter(Mandatory = $true)][object]$Entry)
+
+    if ($Entry.PSObject.Properties.Name -contains 'args' -and $Entry.args -is [array]) {
+        $entryArgs = @($Entry.args | ForEach-Object { [string]$_ })
+        for ($i = 0; $i -lt ($entryArgs.Count - 1); $i++) {
+            $optionName = $entryArgs[$i]
+            if ($optionName -eq '-Path' -or $optionName -eq '-Root') {
+                return $entryArgs[$i + 1]
+            }
+        }
+    }
+
+    $commandValue = if ($Entry.PSObject.Properties.Name -contains 'command') { ([string]$Entry.command) } else { '' }
+    return Parse-StoragePathFromCommand -Command $commandValue
+}
+
 $flowMap = @{}
 $managedAliases = Get-ManagedFlowAliases
 foreach ($entry in $entries) {
@@ -80,8 +97,7 @@ foreach ($entry in $entries) {
     if (-not $flowName) { continue }
 
     if (-not $flowMap.ContainsKey($flowName)) {
-        $commandValue = if ($entry.PSObject.Properties.Name -contains 'command') { ([string]$entry.command) } else { '' }
-        $storagePath = Parse-StoragePathFromCommand -Command $commandValue
+        $storagePath = Parse-StoragePathFromEntry -Entry $entry
 
         $flowMap[$flowName] = [pscustomobject]@{
             Name = $flowName

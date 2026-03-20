@@ -99,7 +99,7 @@ Setup model:
 - Base automations expose setup actions under `tomatoflow-setup`.
 - Setup writes flow-specific runtime command entries in the local metadata file `%LOCALAPPDATA%/tomato/tomatoflow-meta.json`.
 - Configured flows are exposed as top-level automation folders (same level as `tomatoflow-setup`).
-- Runtime metadata entries contain only `alias`, `categoryPath`, and `command`.
+- Runtime metadata entries contain `alias`, `categoryPath`, `command`, and optional `args` (string array) and `cwd` (working directory).
 - Script commands stored in metadata reference repository scripts via `$env:TOMATO_ROOT`.
 - Root config imports that local file, so each user can provision flows without modifying repo files.
 

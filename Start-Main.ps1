@@ -164,6 +164,13 @@ function New-AutomationTree {
 function Get-AutomationWorkingDirectory {
     param([Parameter(Mandatory = $true)][object]$Automation)
 
+    if ($Automation.PSObject.Properties.Name -contains 'Cwd') {
+        $entryCwd = ([string]$Automation.Cwd ?? '').Trim()
+        if ($entryCwd) {
+            return $entryCwd
+        }
+    }
+
     $workingDirectory = $baseRoot
     if ($Automation.PSObject.Properties.Name -contains 'Source' -and $Automation.Source) {
         try {
@@ -220,7 +227,8 @@ function Run-Automation {
     param(
         [Parameter(Mandatory = $true)][string]$Alias,
         [Parameter(Mandatory = $true)][string]$Command,
-        [Parameter(Mandatory = $true)][string]$WorkingDirectory
+        [Parameter(Mandatory = $true)][string]$WorkingDirectory,
+        [Parameter()][AllowNull()][AllowEmptyCollection()][string[]]$Args
     )
 
     # Set environment variables for automations
@@ -232,10 +240,13 @@ function Run-Automation {
     Write-Host ''
     Write-Info "Running automation '$Alias'"
     Write-Info "Command: $Command"
+    if ($Args -and $Args.Count -gt 0) {
+        Write-Info ("Args: {0}" -f ($Args -join ', '))
+    }
     Write-Info "Working directory: $WorkingDirectory"
     Write-Host ''
 
-    $exitCode = Invoke-AutomationCommand -Alias $Alias -Command $Command -AppRoot $baseRoot -WorkingDirectory $WorkingDirectory
+    $exitCode = Invoke-AutomationCommand -Alias $Alias -Command $Command -AppRoot $baseRoot -WorkingDirectory $WorkingDirectory -CommandArgs $Args
 
     Write-Host ''
     Write-Info "Automation finished (exit code: $exitCode)"
@@ -370,7 +381,12 @@ function Automations-Menu {
         }
 
         $workingDirectory = Get-AutomationWorkingDirectory -Automation $selectedAutomation
-        Run-Automation -Alias $selectedAutomation.Alias -Command $selectedAutomation.Command -WorkingDirectory $workingDirectory
+        $automationArgs = @()
+        if ($selectedAutomation.PSObject.Properties.Name -contains 'Args' -and $selectedAutomation.Args -is [array]) {
+            $automationArgs = @($selectedAutomation.Args | ForEach-Object { [string]$_ })
+        }
+
+        Run-Automation -Alias $selectedAutomation.Alias -Command $selectedAutomation.Command -WorkingDirectory $workingDirectory -Args $automationArgs
     }
 }
 
