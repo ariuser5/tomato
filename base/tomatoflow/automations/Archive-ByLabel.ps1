@@ -12,7 +12,8 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [string]$Path,
+    [Alias('Path')]
+    [string]$StoragePath,
 
     [Parameter()]
     [ValidateSet('Auto', 'Local', 'Remote')]
@@ -54,11 +55,11 @@ Import-Module $resultUtilsModule -Force
 $targetScript = Join-Path $PSScriptRoot '.\scripts\Archive-ByLabel.ps1'
 $targetScript = (Resolve-Path -LiteralPath $targetScript -ErrorAction Stop).Path
 
-$target = Resolve-FlowTargetPath -RootPath $Path -PathType $PathType -Subfolder $Subfolder -PromptLabel 'archive by label'
+$target = Resolve-FlowTargetPath -RootPath $StoragePath -PathType $PathType -Subfolder $Subfolder -PromptLabel 'archive by label'
 if ($target.Status -eq 'Aborted') {
     Write-Host 'Archive by label action aborted (ESC).' -ForegroundColor DarkYellow
     Write-Output (New-ToolResult -Status 'Aborted' -Data @{
-            RootPath = $Path
+            RootPath = $StoragePath
             PathType = $PathType
             Action = 'Archive By Label'
         })

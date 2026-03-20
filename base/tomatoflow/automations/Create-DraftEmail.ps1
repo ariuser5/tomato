@@ -16,7 +16,8 @@ param(
     [string]$FlowName,
 
     [Parameter(Mandatory = $true)]
-    [string]$Path,
+    [Alias('Path')]
+    [string]$StoragePath,
 
     [Parameter()]
     [ValidateSet('Auto', 'Local', 'Remote')]
@@ -37,12 +38,12 @@ Import-Module $resultUtilsModule -Force
 $targetScript = Join-Path $PSScriptRoot '.\scripts\Create-DraftEmail.ps1'
 $targetScript = (Resolve-Path -LiteralPath $targetScript -ErrorAction Stop).Path
 
-$target = Resolve-FlowTargetPath -RootPath $Path -PathType $PathType -Subfolder $Subfolder -PromptLabel 'draft email'
+$target = Resolve-FlowTargetPath -RootPath $StoragePath -PathType $PathType -Subfolder $Subfolder -PromptLabel 'draft email'
 if ($target.Status -eq 'Aborted') {
     Write-Host 'Draft email action aborted (ESC).' -ForegroundColor DarkYellow
     Write-Output (New-ToolResult -Status 'Aborted' -Data @{
             FlowName = $FlowName
-            RootPath = $Path
+            RootPath = $StoragePath
             PathType = $PathType
             Action = 'Create Draft Email'
         })
@@ -88,7 +89,7 @@ if ($customDraftScript -and (Test-Path -LiteralPath $customDraftScript -PathType
 
     Write-Output (New-ToolResult -Status 'Completed' -Data @{
             FlowName = $FlowName
-            RootPath = $Path
+            RootPath = $StoragePath
             Path = $target.TargetPath
             Subfolder = $target.SubfolderName
             PathType = $PathType
@@ -99,9 +100,8 @@ if ($customDraftScript -and (Test-Path -LiteralPath $customDraftScript -PathType
 
 $invokeScriptArgs = @{
     Path = $target.TargetPath
-    RootPath = $Path
+    RootPath = $StoragePath
     PathType = $PathType
-    Subfolder = $target.SubfolderName
     DefaultAttachmentPatterns = '[Aa]rchives/'
 }
 if ($FlowName) { $invokeScriptArgs.FlowName = $FlowName }

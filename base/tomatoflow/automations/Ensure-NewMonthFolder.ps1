@@ -5,7 +5,7 @@ Ensure-NewMonthFolder.ps1
 Tomatoflow wrapper for ./scripts/Ensure-NewMonthFolder.ps1.
 
 Behavior:
-- If -Path is not provided, asks the user to enter it interactively.
+- If -StoragePath is not provided, asks the user to enter it interactively.
 - If the user presses Enter with no value, defaults to the current user profile path.
 - Forwards supported parameters to the underlying script.
 -------------------------------------------------------------------------------
@@ -14,7 +14,8 @@ Behavior:
 [CmdletBinding()]
 param(
     [Parameter()]
-    [string]$Path,
+    [Alias('Path')]
+    [string]$StoragePath,
 
     [Parameter()]
     [ValidateSet('Auto', 'Local', 'Remote')]
@@ -70,7 +71,7 @@ function Resolve-TargetPath {
         return $defaultPath
     }
 
-    $inputValue = Read-Host "Path was not provided. Enter -Path value (Enter for default: $defaultPath)"
+    $inputValue = Read-Host "Storage path was not provided. Enter -StoragePath value (Enter for default: $defaultPath)"
     $resolved = ([string]$inputValue ?? '').Trim()
     if (-not $resolved) {
         $resolved = $defaultPath
@@ -82,7 +83,7 @@ function Resolve-TargetPath {
 $targetScript = Join-Path $PSScriptRoot '.\scripts\Ensure-NewMonthFolder.ps1'
 $targetScript = (Resolve-Path -LiteralPath $targetScript -ErrorAction Stop).Path
 
-$resolvedPath = Resolve-TargetPath -InitialPath $Path
+$resolvedPath = Resolve-TargetPath -InitialPath $StoragePath
 
 $targetArgs = @{
     Path            = $resolvedPath

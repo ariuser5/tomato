@@ -5,7 +5,7 @@ Preview-Location.ps1
 Tomatoflow wrapper for base/utils/Preview-Location.ps1.
 
 Behavior:
-- If -Root is not provided, asks the user to enter it interactively.
+- If -StoragePath is not provided, asks the user to enter it interactively.
 - If the user presses Enter without a value, defaults to the current user profile path.
 - Forwards supported parameters to the underlying preview script.
 -------------------------------------------------------------------------------
@@ -18,7 +18,8 @@ param(
     [string]$Navigator = 'auto',
 
     [Parameter()]
-    [string]$Root,
+    [Alias('Path')]
+    [string]$StoragePath,
 
     [Parameter()]
     [int]$MaxDepth = 0,
@@ -71,7 +72,7 @@ function Resolve-PreviewRoot {
     }
 
     while (-not $resolved) {
-        $inputValue = Read-Host "Preview root was not provided. Enter -Root value (Enter for default: $defaultRoot)"
+        $inputValue = Read-Host "Storage path was not provided. Enter -StoragePath value (Enter for default: $defaultRoot)"
         $resolved = ([string]$inputValue ?? '').Trim()
         if (-not $resolved) {
             $resolved = $defaultRoot
@@ -84,7 +85,7 @@ function Resolve-PreviewRoot {
 $previewScript = Join-Path $PSScriptRoot '..\..\utils\Preview-Location.ps1'
 $previewScript = (Resolve-Path -LiteralPath $previewScript -ErrorAction Stop).Path
 
-$resolvedRoot = Resolve-PreviewRoot -InitialRoot $Root
+$resolvedRoot = Resolve-PreviewRoot -InitialRoot $StoragePath
 
 $previewArgs = @{
     Navigator = $Navigator

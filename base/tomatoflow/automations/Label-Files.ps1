@@ -12,7 +12,8 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [string]$Path,
+    [Alias('Path')]
+    [string]$StoragePath,
 
     [Parameter()]
     [ValidateSet('Auto', 'Local', 'Remote')]
@@ -45,11 +46,11 @@ Import-Module $resultUtilsModule -Force
 $targetScript = Join-Path $PSScriptRoot '.\scripts\Label-Files.ps1'
 $targetScript = (Resolve-Path -LiteralPath $targetScript -ErrorAction Stop).Path
 
-$target = Resolve-FlowTargetPath -RootPath $Path -PathType $PathType -Subfolder $Subfolder -PromptLabel 'label files'
+$target = Resolve-FlowTargetPath -RootPath $StoragePath -PathType $PathType -Subfolder $Subfolder -PromptLabel 'label files'
 if ($target.Status -eq 'Aborted') {
     Write-Host 'Label files action aborted (ESC).' -ForegroundColor DarkYellow
     Write-Output (New-ToolResult -Status 'Aborted' -Data @{
-            RootPath = $Path
+            RootPath = $StoragePath
             PathType = $PathType
             Action = 'Label Files'
         })

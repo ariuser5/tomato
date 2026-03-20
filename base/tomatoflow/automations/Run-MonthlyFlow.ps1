@@ -16,7 +16,8 @@ param(
     [string]$FlowName,
 
     [Parameter(Mandatory = $true)]
-    [string]$Path,
+    [Alias('Path')]
+    [string]$StoragePath,
 
     [Parameter()]
     [ValidateSet('Auto', 'Local', 'Remote')]
@@ -96,7 +97,7 @@ function Test-NonZeroExitCode {
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Tomatoflow Monthly Run: $FlowName" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "Storage: $Path" -ForegroundColor Gray
+Write-Host "Storage: $StoragePath" -ForegroundColor Gray
 Write-Host ''
 
 $createdPath = $null
@@ -109,7 +110,7 @@ $step4Executed = $false
 $step4Succeeded = $false
 $step5Output = @()
 
-$currentMonthPath = Get-LatestMonthTargetPath -RootPath $Path -PathType $PathType
+$currentMonthPath = Get-LatestMonthTargetPath -RootPath $StoragePath -PathType $PathType
 if ($currentMonthPath) {
     Write-Host "Current month folder before step 1: $currentMonthPath" -ForegroundColor Gray
 }
@@ -119,7 +120,7 @@ else {
 
 if (Confirm-StepExecution -Step 1 -Title 'Creating next month folder and template artifacts.') {
     Write-Host '[1/5] Creating next month folder and template artifacts...' -ForegroundColor Yellow
-    $step1Output = @(& $createMonthlyReportScript -Path $Path -PathType $PathType -StartYear $StartYear -NewFolderPrefix $NewFolderPrefix)
+    $step1Output = @(& $createMonthlyReportScript -Path $StoragePath -PathType $PathType -StartYear $StartYear -NewFolderPrefix $NewFolderPrefix)
     if (Test-NonZeroExitCode -ExitCode $LASTEXITCODE) {
         throw "Create-MonthlyReport failed with exit code $LASTEXITCODE"
     }
@@ -193,8 +194,7 @@ if (Confirm-StepExecution -Step 4 -Title 'Creating draft email automation.') {
             FlowName = $FlowName
             Path = $currentMonthPath
             PathType = $PathType
-            RootPath = $Path
-            Subfolder = $targetSubfolderName
+            RootPath = $StoragePath
             DefaultAttachmentPatterns = '[Aa]rchives/'
         }
         $null = & $draftScript @draftScriptArgs
@@ -218,7 +218,7 @@ if (Confirm-StepExecution -Step 5 -Title 'Concluding month folder.') {
     else {
         Write-Host '[5/5] Concluding month folder...' -ForegroundColor Yellow
         $targetFolderName = Split-Path -Leaf $currentMonthPath
-        $step5Output = @(& $concludeScript -Path $Path -PathType $PathType -TargetFolderName $targetFolderName)
+        $step5Output = @(& $concludeScript -Path $StoragePath -PathType $PathType -TargetFolderName $targetFolderName)
     }
     if (Test-NonZeroExitCode -ExitCode $LASTEXITCODE) {
         throw "Conclude-MonthFolder failed with exit code $LASTEXITCODE"
@@ -241,7 +241,7 @@ else {
 
 Write-Output (New-ToolResult -Status 'Completed' -Data @{
     FlowName = $FlowName
-    BasePath = $Path
+    BasePath = $StoragePath
     CurrentMonthPath = $currentMonthPath
     CreatedMonthPath = $createdPath
     CreateMonthlyReportResult = @($step1Output)

@@ -28,9 +28,6 @@ param(
     [string]$RootPath,
 
     [Parameter()]
-    [string]$Subfolder
-,
-    [Parameter()]
     [object]$DefaultAttachmentPatterns
 )
 
@@ -710,10 +707,7 @@ function New-MailerParamFileWithContext {
         [string]$TargetPath,
 
         [Parameter()]
-        [string]$PathType,
-
-        [Parameter()]
-        [string]$Subfolder
+        [string]$PathType
     )
 
     if (-not (Test-Path -LiteralPath $ParamFilePath -PathType Leaf)) {
@@ -759,7 +753,12 @@ function New-MailerParamFileWithContext {
     if ($RootPath) { $variables['FLOW_ROOT_PATH'] = $RootPath }
     if ($TargetPath) { $variables['FLOW_TARGET_PATH'] = $TargetPath }
     if ($PathType) { $variables['FLOW_PATH_TYPE'] = $PathType }
-    if ($Subfolder) { $variables['FLOW_SUBFOLDER'] = $Subfolder }
+
+    $targetSubfolder = ''
+    if ($TargetPath) {
+        $targetSubfolder = ([string](Split-Path -Leaf $TargetPath) ?? '').Trim()
+    }
+    if ($targetSubfolder) { $variables['FLOW_SUBFOLDER'] = $targetSubfolder }
     $variables['TOMATO_ROOT'] = ([string]$env:TOMATO_ROOT ?? '')
 
     $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ("tomato-mailer-param-{0}.json" -f ([guid]::NewGuid().ToString('N')))
@@ -784,6 +783,10 @@ $mailerOutput = @()
 $attachmentSelection = $null
 $attachmentTempDir = $null
 $mailerArgs = @()
+$derivedSubfolder = ''
+if ($Path) {
+    $derivedSubfolder = ([string](Split-Path -Leaf $Path) ?? '').Trim()
+}
 
 try {
     $effectiveParamFile = New-MailerParamFileWithContext `
@@ -791,8 +794,7 @@ try {
         -FlowName $FlowName `
         -RootPath $effectiveRootPath `
         -TargetPath $Path `
-        -PathType $PathType `
-        -Subfolder $Subfolder
+        -PathType $PathType
 
     $attachmentSelection = Select-Attachments -TargetPath $Path -PathType $PathType -DefaultPatterns $DefaultAttachmentPatterns
     if ($attachmentSelection.Status -eq 'Aborted') {
@@ -801,7 +803,7 @@ try {
                 FlowName = $FlowName
                 RootPath = $effectiveRootPath
                 Path = $Path
-                Subfolder = $Subfolder
+                Subfolder = $derivedSubfolder
                 PathType = $PathType
                 Action = 'Create Draft Email'
             })
@@ -846,7 +848,7 @@ Write-Output (New-ToolResult -Status 'Completed' -Data @{
         FlowName = $FlowName
         RootPath = $effectiveRootPath
         Path = $Path
-        Subfolder = $Subfolder
+        Subfolder = $derivedSubfolder
         PathType = $PathType
         AttachmentCount = if ($attachmentSelection) { @($attachmentSelection.Attachments).Count } else { 0 }
         ParamFile = $baseParamFile

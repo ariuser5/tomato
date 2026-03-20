@@ -12,7 +12,8 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [string]$Path,
+    [Alias('Path')]
+    [string]$StoragePath,
 
     [Parameter()]
     [ValidateSet('Auto', 'Local', 'Remote')]
@@ -33,11 +34,11 @@ Import-Module $resultUtilsModule -Force
 $targetScript = Join-Path $PSScriptRoot '.\scripts\Conclude-MonthFolder.ps1'
 $targetScript = (Resolve-Path -LiteralPath $targetScript -ErrorAction Stop).Path
 
-$target = Resolve-FlowTargetPath -RootPath $Path -PathType $PathType -Subfolder $Subfolder -PromptLabel 'conclude month folder'
+$target = Resolve-FlowTargetPath -RootPath $StoragePath -PathType $PathType -Subfolder $Subfolder -PromptLabel 'conclude month folder'
 if ($target.Status -eq 'Aborted') {
     Write-Host 'Conclude month folder action aborted (ESC).' -ForegroundColor DarkYellow
     Write-Output (New-ToolResult -Status 'Aborted' -Data @{
-            RootPath = $Path
+            RootPath = $StoragePath
             PathType = $PathType
             Action = 'Conclude Month Folder'
         })
@@ -48,4 +49,4 @@ if ($target.UsedFallback) {
     Write-Host "Using latest month folder: $($target.SubfolderName)" -ForegroundColor Gray
 }
 
-& $targetScript -Path $Path -PathType $PathType -TargetFolderName $target.SubfolderName
+& $targetScript -Path $StoragePath -PathType $PathType -TargetFolderName $target.SubfolderName

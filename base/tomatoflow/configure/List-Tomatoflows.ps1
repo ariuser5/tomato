@@ -58,6 +58,10 @@ function Parse-StoragePathFromCommand {
         return $Matches[1].Replace("''", "'")
     }
 
+    if ($trimmed -match "-StoragePath\s+'((?:''|[^'])*)'") {
+        return $Matches[1].Replace("''", "'")
+    }
+
     if ($trimmed -match "-Root\s+'((?:''|[^'])*)'") {
         return $Matches[1].Replace("''", "'")
     }
@@ -72,7 +76,7 @@ function Parse-StoragePathFromEntry {
         $entryArgs = @($Entry.args | ForEach-Object { [string]$_ })
         for ($i = 0; $i -lt ($entryArgs.Count - 1); $i++) {
             $optionName = $entryArgs[$i]
-            if ($optionName -eq '-Path' -or $optionName -eq '-Root') {
+            if ($optionName -eq '-Path' -or $optionName -eq '-Root' -or $optionName -eq '-StoragePath') {
                 return $entryArgs[$i + 1]
             }
         }

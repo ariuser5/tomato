@@ -89,49 +89,49 @@ function New-FlowAutomations {
             alias = 'Run Monthly Flow'
             categoryPath = $flowCategory
             command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Run-MonthlyFlow.ps1"'
-            args = @('-FlowName', $Name, '-Path', $Path, '-PathType', $Type)
+            args = @('-FlowName', $Name, '-StoragePath', $Path, '-PathType', $Type)
             cwd = $automationsCwd
         },
         [pscustomobject]@{
             alias = 'Preview Storage'
             categoryPath = $flowCategory
             command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Preview-Location.ps1"'
-            args = @('-Root', $Path)
+            args = @('-StoragePath', $Path)
             cwd = $automationsCwd
         },
         [pscustomobject]@{
             alias = 'Ensure New Month Folder'
             categoryPath = $flowCategory
-            command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/scripts/Ensure-NewMonthFolder.ps1"'
-            args = @('-Path', $Path, '-PathType', $Type)
-            cwd = $scriptsCwd
+            command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Ensure-NewMonthFolder.ps1"'
+            args = @('-StoragePath', $Path, '-PathType', $Type)
+            cwd = $automationsCwd
         },
         [pscustomobject]@{
             alias = 'Label Files'
             categoryPath = $flowCategory
             command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Label-Files.ps1"'
-            args = @('-Path', $Path, '-PathType', $Type)
+            args = @('-StoragePath', $Path, '-PathType', $Type)
             cwd = $automationsCwd
         },
         [pscustomobject]@{
             alias = 'Archive By Label'
             categoryPath = $flowCategory
             command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Archive-ByLabel.ps1"'
-            args = @('-Path', $Path, '-PathType', $Type)
+            args = @('-StoragePath', $Path, '-PathType', $Type)
             cwd = $automationsCwd
         },
         [pscustomobject]@{
             alias = 'Create Draft Email'
             categoryPath = $flowCategory
             command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Create-DraftEmail.ps1"'
-            args = @('-FlowName', $Name, '-Path', $Path, '-PathType', $Type)
+            args = @('-FlowName', $Name, '-StoragePath', $Path, '-PathType', $Type)
             cwd = $automationsCwd
         },
         [pscustomobject]@{
             alias = 'Conclude Month Folder'
             categoryPath = $flowCategory
             command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Conclude-MonthFolder.ps1"'
-            args = @('-Path', $Path, '-PathType', $Type)
+            args = @('-StoragePath', $Path, '-PathType', $Type)
             cwd = $automationsCwd
         }
     )
