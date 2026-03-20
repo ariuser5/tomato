@@ -82,8 +82,8 @@ else {
         exit 0
     }
 
-    $monthItems = @(Get-MonthItems -Values $prefixed -SkipInvalid)
-    if (-not $monthItems -or $monthItems.Count -lt 1) {
+    $latestPrefixed = Get-LastMonthValue -Values $prefixed -SkipInvalid
+    if (-not $latestPrefixed) {
         Write-Host 'No valid open month to conclude.' -ForegroundColor Yellow
         Write-Output (New-ToolResult -Status 'NoOp' -Message 'Could not determine last month from underscored folders.' -Data @{
                 Path = $baseInfo.Normalized
@@ -91,8 +91,7 @@ else {
         exit 0
     }
 
-    $sorted = $monthItems | Sort-Object -Property @{ Expression = { $_.Year }; Descending = $true }, @{ Expression = { $_.Month }; Descending = $true }
-    $sourceName = $sorted[0].Value
+    $sourceName = $latestPrefixed
 }
 
 if (-not ($existingDirs -contains $sourceName)) {
