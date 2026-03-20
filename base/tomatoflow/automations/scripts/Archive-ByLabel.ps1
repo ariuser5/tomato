@@ -57,6 +57,11 @@ param(
     [Parameter()]
     [string]$UnlabeledGroupName = "UNLABELED",
 
+    # Optional JSON object file that maps source label -> archive name token.
+    # Example: { "EXPENSE": "expenses", "INVOICE": "invoices" }
+    [Parameter()]
+    [string]$LabelArchiveMapFile,
+
     # Overwrite existing archive on upload (archive names include timestamps, so usually not needed)
     [Parameter()]
     [switch]$Overwrite
@@ -76,6 +81,109 @@ Import-Module $resultUtilsModule -Force
 $labelUtilsModule = Join-Path $PSScriptRoot '.\modules\LabelUtils.psm1'
 Import-Module $labelUtilsModule -Force
 
+function Resolve-OptionalPathFromTomatoRoot {
+    [CmdletBinding()]
+    param(
+        [Parameter()]
+        [string]$InputPath
+    )
+
+    $raw = ([string]$InputPath ?? '').Trim()
+    if (-not $raw) {
+        return ''
+    }
+
+    $tomatoRoot = ([string]$env:TOMATO_ROOT ?? '').Trim()
+    $expanded = $raw
+
+    if ($tomatoRoot) {
+        if ($expanded -like '$env:TOMATO_ROOT/*' -or $expanded -like '$env:TOMATO_ROOT\*') {
+            $suffix = $expanded.Substring('$env:TOMATO_ROOT'.Length).TrimStart('/', [char]'\')
+            $expanded = Join-Path $tomatoRoot $suffix
+        }
+        elseif ($expanded -like '$TOMATO_ROOT/*' -or $expanded -like '$TOMATO_ROOT\*') {
+            $suffix = $expanded.Substring('$TOMATO_ROOT'.Length).TrimStart('/', [char]'\')
+            $expanded = Join-Path $tomatoRoot $suffix
+        }
+        elseif ($expanded -like '%TOMATO_ROOT%/*' -or $expanded -like '%TOMATO_ROOT%\*') {
+            $suffix = $expanded.Substring('%TOMATO_ROOT%'.Length).TrimStart('/', [char]'\')
+            $expanded = Join-Path $tomatoRoot $suffix
+        }
+    }
+
+    if (-not [System.IO.Path]::IsPathRooted($expanded)) {
+        $baseDir = if ($tomatoRoot) { $tomatoRoot } else { (Get-Location).Path }
+        $expanded = Join-Path $baseDir $expanded
+    }
+
+    return [System.IO.Path]::GetFullPath($expanded)
+}
+
+function Read-LabelArchiveMap {
+    [CmdletBinding()]
+    param(
+        [Parameter()]
+        [string]$MapFilePath
+    )
+
+    $map = [System.Collections.Generic.Dictionary[string, string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    $resolvedPath = Resolve-OptionalPathFromTomatoRoot -InputPath $MapFilePath
+    if (-not $resolvedPath) {
+        return $map
+    }
+
+    if (-not (Test-Path -LiteralPath $resolvedPath -PathType Leaf)) {
+        throw "Label archive map file not found: $resolvedPath"
+    }
+
+    $raw = Get-Content -LiteralPath $resolvedPath -Raw -Encoding UTF8
+    if (-not $raw -or -not $raw.Trim()) {
+        return $map
+    }
+
+    $parsed = $raw | ConvertFrom-Json -ErrorAction Stop
+    if ($parsed -isnot [psobject]) {
+        throw "Invalid label archive map in '$resolvedPath': expected a JSON object of { label: alias }."
+    }
+
+    foreach ($prop in @($parsed.PSObject.Properties)) {
+        $sourceLabel = ([string]$prop.Name ?? '').Trim()
+        if (-not $sourceLabel) {
+            continue
+        }
+
+        $aliasText = ([string]$prop.Value ?? '').Trim()
+        if (-not $aliasText) {
+            continue
+        }
+
+        $map[$sourceLabel] = $aliasText
+    }
+
+    return $map
+}
+
+function Get-ArchiveNameToken {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Label,
+
+        [Parameter(Mandatory = $true)]
+        [System.Collections.Generic.Dictionary[string, string]]$AliasMap
+    )
+
+    $effective = $Label
+    if ($AliasMap.ContainsKey($Label)) {
+        $candidate = ([string]$AliasMap[$Label] ?? '').Trim()
+        if ($candidate) {
+            $effective = $candidate
+        }
+    }
+
+    return ($effective -replace '[^a-zA-Z0-9_-]', '_')
+}
+
 $baseInfo = $null
 try {
     $baseInfo = Resolve-UnifiedPath -Path $Path -PathType $PathType
@@ -91,6 +199,8 @@ if ($baseInfo.PathType -eq 'Remote') {
 if (-not $ArchiveDestinationPath -or -not $ArchiveDestinationPath.Trim()) {
     $ArchiveDestinationPath = Join-UnifiedPath -Base $baseInfo.Normalized -Child 'archives' -PathType $baseInfo.PathType
 }
+
+$labelAliasMap = Read-LabelArchiveMap -MapFilePath $LabelArchiveMapFile
 
 $archiveExt = Convert-ArchiveExtension -Extension $ArchiveExtension
 
@@ -124,6 +234,9 @@ if ($baseInfo.PathType -eq 'Remote') {
 
 if ($ExcludeNameRegex) {
     Write-Host "  Excluding basenames matching: $ExcludeNameRegex" -ForegroundColor Gray
+}
+if ($labelAliasMap.Count -gt 0) {
+    Write-Host "  Label archive map entries loaded: $($labelAliasMap.Count)" -ForegroundColor Gray
 }
 
 # Locate reusable scripts
@@ -270,8 +383,9 @@ try {
     foreach ($g in $groups) {
         $label = $g.Name
         $labelDirSafe = ($label -replace '[^a-zA-Z0-9_-]', '_')
+        $archiveNameToken = Get-ArchiveNameToken -Label $label -AliasMap $labelAliasMap
 
-        $archiveFileName = "${labelDirSafe}_${timestamp}.$archiveExt"
+        $archiveFileName = "${archiveNameToken}_${timestamp}.$archiveExt"
         $archivePath = Join-Path $workRoot $archiveFileName
 
         if ($baseInfo.PathType -eq 'Remote') {

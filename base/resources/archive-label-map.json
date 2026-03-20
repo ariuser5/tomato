@@ -1,0 +1,5 @@
+{
+  "EXPENSE": "expenses",
+  "INVOICE": "invoices",
+  "BALANCE": "balances"
+}

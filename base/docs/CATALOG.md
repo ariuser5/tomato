@@ -157,8 +157,12 @@ Setup model:
 
 - File: tomatoflow/automations/scripts/Archive-ByLabel.ps1
 - Purpose: creates one archive per label and uploads/copies output.
+- Supports optional `-LabelArchiveMapFile` (JSON object: `label -> alias`) to customize final archive filename tokens while keeping grouping by original labels.
 - Typical usage:
   - pwsh -NoProfile -File ./tomatoflow/automations/scripts/Archive-ByLabel.ps1 -Path "gdrive:parties/entity/rapoarte/_current-month"
+
+- File: resources/archive-label-map.json
+- Purpose: default label-to-alias map used by flow provisioning for archive filename customization.
 
 - File: tomatoflow/automations/scripts/Copy-ToMonthFolder.ps1
 - Purpose: copies month assets between source/destination paths.

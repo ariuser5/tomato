@@ -83,6 +83,7 @@ function New-FlowAutomations {
 
     $automationsCwd = '$env:TOMATO_ROOT/base/tomatoflow/automations'
     $defaultMailerParamFile = '$TOMATO_ROOT/base/resources/mailer-sample.json'
+    $defaultLabelArchiveMapFile = '$TOMATO_ROOT/base/resources/archive-label-map.json'
 
     return @(
         [pscustomobject]@{
@@ -136,7 +137,8 @@ function New-FlowAutomations {
                 '-ScriptPath', 'Archive-ByLabel.ps1',
                 '-PStoragePath', $Path,
                 '-PPathType', $Type,
-                '-PPath', '$Prompt'
+                '-PPath', '$Prompt',
+                '-PLabelArchiveMapFile', $defaultLabelArchiveMapFile
             )
             cwd = $automationsCwd
         },
