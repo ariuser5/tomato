@@ -6,14 +6,14 @@
 # Design:
 # - Keep wrapper logic minimal.
 # - Forward only P-prefixed args to the target script.
-# - Optional prompt marker for subfolder-style parameters.
+# - Optional prompt marker for path/name parameters.
 #
 # Pass-through convention:
 # - Remaining args prefixed with -P are forwarded without the P.
 #   Example: -PMailerParamFile value => -MailerParamFile value
 #
 # Prompt convention:
-# - Pass value '$Prompt' to -PSubfolder or -PTargetFolderName to trigger
+# - Pass value '$Prompt' to -PPath or -PTargetFolderName to trigger
 #   interactive month-subfolder selection.
 # -----------------------------------------------------------------------------
 
@@ -153,14 +153,11 @@ function Parse-PassThroughArgs {
     return $result
 }
 
-function Resolve-SubfolderPromptValue {
+function Resolve-PathPromptValue {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
         [hashtable]$InvokeArgs,
-
-        [Parameter(Mandatory = $true)]
-        [string]$SubfolderParameterName,
 
         [Parameter(Mandatory = $true)]
         [string]$PromptMarker,
@@ -172,17 +169,17 @@ function Resolve-SubfolderPromptValue {
         [string]$TargetScriptPath
     )
 
-    if (-not $InvokeArgs.ContainsKey($SubfolderParameterName)) {
+    if (-not $InvokeArgs.ContainsKey('Path')) {
         return
     }
 
-    $rawValue = ([string]$InvokeArgs[$SubfolderParameterName] ?? '').Trim()
-    if ($rawValue -ne $PromptMarker) {
+    $rawPathValue = ([string]$InvokeArgs.Path ?? '').Trim()
+    if ($rawPathValue -ne $PromptMarker) {
         return
     }
 
     $rootPath = ''
-    foreach ($candidate in @('StoragePath', 'Path', 'RootPath')) {
+    foreach ($candidate in @('StoragePath')) {
         if ($InvokeArgs.ContainsKey($candidate)) {
             $candidateValue = ([string]$InvokeArgs[$candidate] ?? '').Trim()
             if ($candidateValue) {
@@ -193,7 +190,7 @@ function Resolve-SubfolderPromptValue {
     }
 
     if (-not $rootPath) {
-        throw "Cannot resolve '$SubfolderParameterName' from '$PromptMarker': expected one of -PStoragePath, -PPath, or -PRootPath."
+        throw "Cannot resolve 'Path' from '$PromptMarker': expected -PStoragePath."
     }
 
     $pathType = 'Auto'
@@ -219,7 +216,87 @@ function Resolve-SubfolderPromptValue {
         Write-Host "Using latest month folder: $($target.SubfolderName)" -ForegroundColor Gray
     }
 
-    $InvokeArgs[$SubfolderParameterName] = $target.SubfolderName
+    $InvokeArgs.Path = $target.TargetPath
+}
+
+function Resolve-TargetFolderNamePromptValue {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$InvokeArgs,
+
+        [Parameter(Mandatory = $true)]
+        [string]$PromptMarker,
+
+        [Parameter(Mandatory = $true)]
+        [string]$PromptLabel,
+
+        [Parameter(Mandatory = $true)]
+        [string]$TargetScriptPath
+    )
+
+    if (-not $InvokeArgs.ContainsKey('TargetFolderName')) {
+        return
+    }
+
+    $rawValue = ([string]$InvokeArgs.TargetFolderName ?? '').Trim()
+    if ($rawValue -ne $PromptMarker) {
+        return
+    }
+
+    $rootPath = ''
+    foreach ($candidate in @('Path', 'StoragePath')) {
+        if ($InvokeArgs.ContainsKey($candidate)) {
+            $candidateValue = ([string]$InvokeArgs[$candidate] ?? '').Trim()
+            if ($candidateValue) {
+                $rootPath = $candidateValue
+                break
+            }
+        }
+    }
+
+    if (-not $rootPath) {
+        throw "Cannot resolve 'TargetFolderName' from '$PromptMarker': expected one of -PPath or -PStoragePath."
+    }
+
+    $pathType = 'Auto'
+    if ($InvokeArgs.ContainsKey('PathType')) {
+        $candidatePathType = ([string]$InvokeArgs.PathType ?? '').Trim()
+        if ($candidatePathType) {
+            $pathType = $candidatePathType
+        }
+    }
+
+    $target = Resolve-FlowTargetPath -RootPath $rootPath -PathType $pathType -PromptLabel $PromptLabel
+    if ($target.Status -eq 'Aborted') {
+        Write-Host 'Action aborted (ESC).' -ForegroundColor DarkYellow
+        Write-Output (New-ToolResult -Status 'Aborted' -Data @{
+                Script = $TargetScriptPath
+                RootPath = $rootPath
+                PathType = $pathType
+            })
+        exit 0
+    }
+
+    if ($target.UsedFallback) {
+        Write-Host "Using latest month folder: $($target.SubfolderName)" -ForegroundColor Gray
+    }
+
+    $InvokeArgs.TargetFolderName = $target.SubfolderName
+}
+
+function Remove-HelperOnlyArgs {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$InvokeArgs
+    )
+
+    foreach ($helperName in @('StoragePath')) {
+        if ($InvokeArgs.ContainsKey($helperName)) {
+            $null = $InvokeArgs.Remove($helperName)
+        }
+    }
 }
 
 $targetScript = Resolve-GenericScriptPath -RawPath $ScriptPath
@@ -230,7 +307,9 @@ $promptMarker = '$Prompt'
 $promptLabel = ((Split-Path -Leaf $targetScript) -replace '\.ps1$', '') -replace '[-_]+', ' '
 $promptLabel = $promptLabel.ToLowerInvariant()
 
-Resolve-SubfolderPromptValue -InvokeArgs $invokeArgs -SubfolderParameterName 'Subfolder' -PromptMarker $promptMarker -PromptLabel $promptLabel -TargetScriptPath $targetScript
-Resolve-SubfolderPromptValue -InvokeArgs $invokeArgs -SubfolderParameterName 'TargetFolderName' -PromptMarker $promptMarker -PromptLabel $promptLabel -TargetScriptPath $targetScript
+Resolve-PathPromptValue -InvokeArgs $invokeArgs -PromptMarker $promptMarker -PromptLabel $promptLabel -TargetScriptPath $targetScript
+Resolve-TargetFolderNamePromptValue -InvokeArgs $invokeArgs -PromptMarker $promptMarker -PromptLabel $promptLabel -TargetScriptPath $targetScript
+
+Remove-HelperOnlyArgs -InvokeArgs $invokeArgs
 
 & $targetScript @invokeArgs

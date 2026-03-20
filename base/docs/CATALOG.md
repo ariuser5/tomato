@@ -124,7 +124,7 @@ Setup model:
 
 - File: tomatoflow/automations/Run-SingleScript.ps1
 - Purpose: generic top-level wrapper for single-action scripts; forwards `-P*` args as target-script parameters.
-- Prompt marker: pass `'$Prompt'` to `-PSubfolder` or `-PTargetFolderName` to trigger interactive month-subfolder selection.
+- Prompt marker: pass `'$Prompt'` to `-PPath` or `-PTargetFolderName` to trigger interactive month-subfolder selection.
 
 - Note: flow setup now provisions single-action menu entries (Preview Storage, Ensure New Month Folder, Label Files, Archive By Label, Create Draft Email, Conclude Month Folder) through `tomatoflow/automations/Run-SingleScript.ps1` while preserving the same aliases and prompt behavior.
 

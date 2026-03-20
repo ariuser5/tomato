@@ -124,7 +124,7 @@ function New-FlowAutomations {
                 '-ScriptPath', 'Label-Files.ps1',
                 '-PStoragePath', $Path,
                 '-PPathType', $Type,
-                '-PSubfolder', '$Prompt'
+                '-PPath', '$Prompt'
             )
             cwd = $automationsCwd
         },
@@ -136,7 +136,7 @@ function New-FlowAutomations {
                 '-ScriptPath', 'Archive-ByLabel.ps1',
                 '-PStoragePath', $Path,
                 '-PPathType', $Type,
-                '-PSubfolder', '$Prompt'
+                '-PPath', '$Prompt'
             )
             cwd = $automationsCwd
         },
@@ -148,7 +148,7 @@ function New-FlowAutomations {
                 '-ScriptPath', 'Create-DraftEmail.ps1',
                 '-PStoragePath', $Path,
                 '-PPathType', $Type,
-                '-PSubfolder', '$Prompt',
+                '-PPath', '$Prompt',
                 '-PMailerParamFile', $defaultMailerParamFile
             )
             cwd = $automationsCwd
@@ -159,9 +159,9 @@ function New-FlowAutomations {
             command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Run-SingleScript.ps1"'
             args = @(
                 '-ScriptPath', 'Conclude-MonthFolder.ps1',
-                '-PStoragePath', $Path,
+                '-PPath', $Path,
                 '-PPathType', $Type,
-                '-PSubfolder', '$Prompt'
+                '-PTargetFolderName', '$Prompt'
             )
             cwd = $automationsCwd
         }
