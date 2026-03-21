@@ -4,11 +4,12 @@
 # Runs the unified tomatoflow for a configured storage path.
 #
 # Flow steps:
-#   1) Create next month folder and copy template artifacts.
-#   2) Label files in the newly created month folder.
+#   1) Select month folder to process (latest or custom existing folder).
+#   2) Label files in the selected month folder.
 #   3) Create archives grouped by labels.
 #   4) Optionally open project-specific draft automation if available.
 #   5) Conclude worked month folder by removing underscore prefix.
+#   6) Create next month folder and copy template artifacts.
 # -----------------------------------------------------------------------------
 [CmdletBinding()]
 param(
@@ -50,6 +51,12 @@ $draftScript = Join-Path $scriptsDir 'Create-DraftEmail.ps1'
 $flowTargetUtilsModule = Join-Path $scriptDir '.\modules\FlowTargetUtils.psm1'
 Import-Module $flowTargetUtilsModule -Force
 
+$pathUtilsModule = Join-Path $scriptDir '..\..\utils\PathUtils.psm1'
+Import-Module $pathUtilsModule -Force
+
+$commandUtilsModule = Join-Path $scriptDir '..\..\utils\common\CommandUtils.psm1'
+Import-Module $commandUtilsModule -Force
+
 $resultUtilsModule = Join-Path $scriptDir '..\..\utils\common\ResultUtils.psm1'
 Import-Module $resultUtilsModule -Force
 
@@ -65,7 +72,7 @@ function Confirm-StepExecution {
         [Parameter(Mandatory = $true)][string]$Title
     )
 
-    $prompt = "[{0}/5] {1} Proceed with this step? [Yes/No] (default: Yes, ESC = abort)" -f $Step, $Title
+    $prompt = "[{0}/6] {1} Proceed with this step? [Yes/No] (default: Yes, ESC = abort)" -f $Step, $Title
 
     while ($true) {
         $response = Read-InputWithEsc -Prompt $prompt
@@ -153,6 +160,115 @@ function Resolve-MailerParamFilePath {
     return [System.IO.Path]::GetFullPath($expanded)
 }
 
+function Confirm-YesNoOrAbort {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Prompt
+    )
+
+    while ($true) {
+        $response = Read-InputWithEsc -Prompt $Prompt
+        if ($response.Status -eq 'Escaped') {
+            return 'Abort'
+        }
+
+        $choice = ([string]$response.Value ?? '').Trim().ToLowerInvariant()
+        if (-not $choice -or $choice -eq 'y' -or $choice -eq 'yes') {
+            return 'Yes'
+        }
+        if ($choice -eq 'n' -or $choice -eq 'no') {
+            return 'No'
+        }
+
+        Write-Host 'Please answer Yes or No.' -ForegroundColor Yellow
+    }
+}
+
+function Test-UnifiedDirectoryExists {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+
+        [Parameter()]
+        [ValidateSet('Auto', 'Local', 'Remote')]
+        [string]$PathType = 'Auto'
+    )
+
+    $resolved = Resolve-UnifiedPath -Path $Path -PathType $PathType
+    if ($resolved.PathType -eq 'Remote') {
+        try {
+            $null = Invoke-Rclone -Arguments @('lsf', $resolved.Normalized, '--dirs-only', '--max-depth', '1') -ErrorMessage "Failed to verify remote path '$($resolved.Normalized)'."
+            return $true
+        }
+        catch {
+            return $false
+        }
+    }
+
+    return (Test-Path -LiteralPath $resolved.LocalPath -PathType Container)
+}
+
+function Resolve-MonthFolderToProcess {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RootPath,
+
+        [Parameter()]
+        [ValidateSet('Auto', 'Local', 'Remote')]
+        [string]$PathType = 'Auto'
+    )
+
+    $rootInfo = Resolve-UnifiedPath -Path $RootPath -PathType $PathType
+    $latestMonthPath = Get-LatestMonthTargetPath -RootPath $RootPath -PathType $PathType
+    $latestMonthName = if ($latestMonthPath) { Split-Path -Leaf $latestMonthPath } else { $null }
+
+    if ($latestMonthPath) {
+        $decision = Confirm-YesNoOrAbort -Prompt ("[1/6] Use latest month folder '{0}'? [Yes/No] (default: Yes, ESC = abort)" -f $latestMonthName)
+        if ($decision -eq 'Abort') {
+            return [pscustomobject]@{
+                Status = 'Aborted'
+                Path = $null
+            }
+        }
+
+        if ($decision -eq 'Yes') {
+            return [pscustomobject]@{
+                Status = 'Resolved'
+                Path = $latestMonthPath
+            }
+        }
+    }
+    else {
+        Write-Host '[1/6] No latest month folder found. Please enter an existing folder name to process.' -ForegroundColor DarkYellow
+    }
+
+    $nameResponse = Read-InputWithEsc -Prompt '[1/6] Enter month folder name to process (must already exist, ESC = abort)'
+    if ($nameResponse.Status -eq 'Escaped') {
+        return [pscustomobject]@{
+            Status = 'Aborted'
+            Path = $null
+        }
+    }
+
+    $folderName = ([string]$nameResponse.Value ?? '').Trim()
+    if (-not $folderName) {
+        throw 'Month folder name is required when not using the latest month folder.'
+    }
+
+    $candidatePath = Join-UnifiedPath -Base $rootInfo.Normalized -Child $folderName -PathType $rootInfo.PathType
+    if (-not (Test-UnifiedDirectoryExists -Path $candidatePath -PathType $rootInfo.PathType)) {
+        throw "Selected month folder does not exist: $candidatePath"
+    }
+
+    return [pscustomobject]@{
+        Status = 'Resolved'
+        Path = $candidatePath
+    }
+}
+
 $resolvedFlowName = Resolve-FlowName -InputName $FlowName
 $resolvedMailerParamFile = Resolve-MailerParamFilePath -InputPath $MailerParamFile
 
@@ -198,20 +314,128 @@ function Exit-AbortedMonthlyFlow {
     exit 0
 }
 
-$currentMonthPath = Get-LatestMonthTargetPath -RootPath $StoragePath -PathType $PathType
-if ($currentMonthPath) {
-    Write-Host "Current month folder before step 1: $currentMonthPath" -ForegroundColor Gray
-}
-else {
-    Write-Host 'Current month folder before step 1: (none found)' -ForegroundColor DarkYellow
-}
-
-$step1Decision = Confirm-StepExecution -Step 1 -Title 'Creating next month folder and template artifacts.'
-if ($step1Decision -eq 'Abort') {
+$monthSelection = Resolve-MonthFolderToProcess -RootPath $StoragePath -PathType $PathType
+if ($monthSelection.Status -eq 'Aborted') {
     Exit-AbortedMonthlyFlow -BeforeStep 1
 }
-if ($step1Decision -eq 'Run') {
-    Write-Host '[1/5] Creating next month folder and template artifacts...' -ForegroundColor Yellow
+$currentMonthPath = $monthSelection.Path
+Write-Host "[1/6] Selected month folder: $currentMonthPath" -ForegroundColor Gray
+
+$step2Decision = Confirm-StepExecution -Step 2 -Title 'Labeling files in selected month folder.'
+if ($step2Decision -eq 'Abort') {
+    Exit-AbortedMonthlyFlow -BeforeStep 2
+}
+if ($step2Decision -eq 'Run') {
+    if (-not $currentMonthPath) {
+        Write-Host '[2/6] Skipped labeling: no selected month folder is available.' -ForegroundColor DarkYellow
+    }
+    else {
+        Write-Host '[2/6] Labeling files in selected month folder...' -ForegroundColor Yellow
+        $labelArgs = @{
+            Path = $currentMonthPath
+            PathType = $PathType
+        }
+        if ($LabelsFilePath) {
+            $labelArgs.LabelsFilePath = $LabelsFilePath
+        }
+
+        $step2Output = @(& $labelScript @labelArgs)
+        if (Test-NonZeroExitCode -ExitCode $LASTEXITCODE) {
+            throw "Label-Files failed with exit code $LASTEXITCODE"
+        }
+    }
+}
+else {
+    Write-Host '[2/6] Skipped labeling files.' -ForegroundColor DarkYellow
+}
+
+$step3Decision = Confirm-StepExecution -Step 3 -Title 'Archiving files by label.'
+if ($step3Decision -eq 'Abort') {
+    Exit-AbortedMonthlyFlow -BeforeStep 3
+}
+if ($step3Decision -eq 'Run') {
+    if (-not $currentMonthPath) {
+        Write-Host '[3/6] Skipped archiving: no selected month folder is available.' -ForegroundColor DarkYellow
+    }
+    else {
+        Write-Host '[3/6] Archiving files by label...' -ForegroundColor Yellow
+        $step3Output = @(& $archiveScript -Path $currentMonthPath -PathType $PathType)
+        if (Test-NonZeroExitCode -ExitCode $LASTEXITCODE) {
+            throw "Archive-ByLabel failed with exit code $LASTEXITCODE"
+        }
+    }
+}
+else {
+    Write-Host '[3/6] Skipped archiving files by label.' -ForegroundColor DarkYellow
+}
+
+$step4Decision = Confirm-StepExecution -Step 4 -Title 'Creating draft email automation.'
+if ($step4Decision -eq 'Abort') {
+    Exit-AbortedMonthlyFlow -BeforeStep 4
+}
+if ($step4Decision -eq 'Run') {
+    $step4Requested = $true
+    if (Test-Path -LiteralPath $draftScript -PathType Leaf) {
+        if (-not $resolvedMailerParamFile) {
+            Write-Host '[4/6] Skipped draft email automation: missing -MailerParamFile.' -ForegroundColor DarkYellow
+            Write-Host "      To restore this step, configure a valid mailer param file in automation args, for example: -MailerParamFile '`$TOMATO_ROOT/base/resources/mailer-sample.json'." -ForegroundColor DarkYellow
+        }
+        elseif (-not (Test-Path -LiteralPath $resolvedMailerParamFile -PathType Leaf)) {
+            Write-Host "[4/6] Skipped draft email automation: param file not found: $resolvedMailerParamFile" -ForegroundColor DarkYellow
+            Write-Host "      To restore this step, update -MailerParamFile to an existing file (for example '`$TOMATO_ROOT/base/resources/mailer-sample.json')." -ForegroundColor DarkYellow
+        }
+        else {
+        Write-Host '[4/6] Creating draft email automation...' -ForegroundColor Yellow
+        $step4Executed = $true
+        $targetSubfolderName = if ($currentMonthPath) { Split-Path -Leaf $currentMonthPath } else { $null }
+        $draftScriptArgs = @{
+            Path = $currentMonthPath
+            MailerParamFile = $resolvedMailerParamFile
+            PathType = $PathType
+            DefaultAttachmentPatterns = '[Aa]rchives/'
+        }
+        $null = & $draftScript @draftScriptArgs
+        if (Test-NonZeroExitCode -ExitCode $LASTEXITCODE) {
+            throw "Create-DraftEmail failed with exit code $LASTEXITCODE"
+        }
+        $step4Succeeded = $true
+        }
+    }
+    else {
+        Write-Host '[4/6] Skipped draft email automation: script is not configured in this repository yet.' -ForegroundColor DarkYellow
+    }
+}
+else {
+    Write-Host '[4/6] Skipped draft email automation.' -ForegroundColor DarkYellow
+}
+
+$step5Decision = Confirm-StepExecution -Step 5 -Title 'Concluding month folder.'
+if ($step5Decision -eq 'Abort') {
+    Exit-AbortedMonthlyFlow -BeforeStep 5
+}
+if ($step5Decision -eq 'Run') {
+    if (-not $currentMonthPath) {
+        Write-Host '[5/6] Skipped concluding month folder: no selected month folder is available.' -ForegroundColor DarkYellow
+    }
+    else {
+        Write-Host '[5/6] Concluding month folder...' -ForegroundColor Yellow
+        $targetFolderName = Split-Path -Leaf $currentMonthPath
+        $step5Output = @(& $concludeScript -Path $StoragePath -PathType $PathType -TargetFolderName $targetFolderName)
+    }
+    if (Test-NonZeroExitCode -ExitCode $LASTEXITCODE) {
+        throw "Conclude-MonthFolder failed with exit code $LASTEXITCODE"
+    }
+}
+else {
+    Write-Host '[5/6] Skipped concluding month folder.' -ForegroundColor DarkYellow
+}
+
+$step6Decision = Confirm-StepExecution -Step 6 -Title 'Creating next month folder and template artifacts.'
+if ($step6Decision -eq 'Abort') {
+    Exit-AbortedMonthlyFlow -BeforeStep 6
+}
+if ($step6Decision -eq 'Run') {
+    Write-Host '[6/6] Creating next month folder and template artifacts...' -ForegroundColor Yellow
     $step1Output = @(& $createMonthlyReportScript -Path $StoragePath -PathType $PathType -StartYear $StartYear -NewFolderPrefix $NewFolderPrefix)
     if (Test-NonZeroExitCode -ExitCode $LASTEXITCODE) {
         throw "Create-MonthlyReport failed with exit code $LASTEXITCODE"
@@ -229,121 +453,9 @@ if ($step1Decision -eq 'Run') {
     if (-not $createdPath) {
         throw 'Monthly flow could not determine newly created month folder path.'
     }
-
-    $currentMonthPath = $createdPath
 }
 else {
-    Write-Host '[1/5] Skipped creating next month folder and template artifacts.' -ForegroundColor DarkYellow
-    Write-Host "Selected Month folder is: $currentMonthPath" -ForegroundColor Gray
-}
-
-$step2Decision = Confirm-StepExecution -Step 2 -Title 'Labeling files in current month folder.'
-if ($step2Decision -eq 'Abort') {
-    Exit-AbortedMonthlyFlow -BeforeStep 2
-}
-if ($step2Decision -eq 'Run') {
-    if (-not $currentMonthPath) {
-        Write-Host '[2/5] Skipped labeling: no current month folder could be resolved.' -ForegroundColor DarkYellow
-    }
-    else {
-        Write-Host '[2/5] Labeling files in current month folder...' -ForegroundColor Yellow
-        $labelArgs = @{
-            Path = $currentMonthPath
-            PathType = $PathType
-        }
-        if ($LabelsFilePath) {
-            $labelArgs.LabelsFilePath = $LabelsFilePath
-        }
-
-        $step2Output = @(& $labelScript @labelArgs)
-        if (Test-NonZeroExitCode -ExitCode $LASTEXITCODE) {
-            throw "Label-Files failed with exit code $LASTEXITCODE"
-        }
-    }
-}
-else {
-    Write-Host '[2/5] Skipped labeling files.' -ForegroundColor DarkYellow
-}
-
-$step3Decision = Confirm-StepExecution -Step 3 -Title 'Archiving files by label.'
-if ($step3Decision -eq 'Abort') {
-    Exit-AbortedMonthlyFlow -BeforeStep 3
-}
-if ($step3Decision -eq 'Run') {
-    if (-not $currentMonthPath) {
-        Write-Host '[3/5] Skipped archiving: no current month folder could be resolved.' -ForegroundColor DarkYellow
-    }
-    else {
-        Write-Host '[3/5] Archiving files by label...' -ForegroundColor Yellow
-        $step3Output = @(& $archiveScript -Path $currentMonthPath -PathType $PathType)
-        if (Test-NonZeroExitCode -ExitCode $LASTEXITCODE) {
-            throw "Archive-ByLabel failed with exit code $LASTEXITCODE"
-        }
-    }
-}
-else {
-    Write-Host '[3/5] Skipped archiving files by label.' -ForegroundColor DarkYellow
-}
-
-$step4Decision = Confirm-StepExecution -Step 4 -Title 'Creating draft email automation.'
-if ($step4Decision -eq 'Abort') {
-    Exit-AbortedMonthlyFlow -BeforeStep 4
-}
-if ($step4Decision -eq 'Run') {
-    $step4Requested = $true
-    if (Test-Path -LiteralPath $draftScript -PathType Leaf) {
-        if (-not $resolvedMailerParamFile) {
-            Write-Host '[4/5] Skipped draft email automation: missing -MailerParamFile.' -ForegroundColor DarkYellow
-            Write-Host "      To restore this step, configure a valid mailer param file in automation args, for example: -MailerParamFile '`$TOMATO_ROOT/base/resources/mailer-sample.json'." -ForegroundColor DarkYellow
-        }
-        elseif (-not (Test-Path -LiteralPath $resolvedMailerParamFile -PathType Leaf)) {
-            Write-Host "[4/5] Skipped draft email automation: param file not found: $resolvedMailerParamFile" -ForegroundColor DarkYellow
-            Write-Host "      To restore this step, update -MailerParamFile to an existing file (for example '`$TOMATO_ROOT/base/resources/mailer-sample.json')." -ForegroundColor DarkYellow
-        }
-        else {
-        Write-Host '[4/5] Creating draft email automation...' -ForegroundColor Yellow
-        $step4Executed = $true
-        $targetSubfolderName = if ($currentMonthPath) { Split-Path -Leaf $currentMonthPath } else { $null }
-        $draftScriptArgs = @{
-            Path = $currentMonthPath
-            MailerParamFile = $resolvedMailerParamFile
-            PathType = $PathType
-            DefaultAttachmentPatterns = '[Aa]rchives/'
-        }
-        $null = & $draftScript @draftScriptArgs
-        if (Test-NonZeroExitCode -ExitCode $LASTEXITCODE) {
-            throw "Create-DraftEmail failed with exit code $LASTEXITCODE"
-        }
-        $step4Succeeded = $true
-        }
-    }
-    else {
-        Write-Host '[4/5] Skipped draft email automation: script is not configured in this repository yet.' -ForegroundColor DarkYellow
-    }
-}
-else {
-    Write-Host '[4/5] Skipped draft email automation.' -ForegroundColor DarkYellow
-}
-
-$step5Decision = Confirm-StepExecution -Step 5 -Title 'Concluding month folder.'
-if ($step5Decision -eq 'Abort') {
-    Exit-AbortedMonthlyFlow -BeforeStep 5
-}
-if ($step5Decision -eq 'Run') {
-    if (-not $currentMonthPath) {
-        Write-Host '[5/5] Skipped concluding month folder: no current month folder could be resolved.' -ForegroundColor DarkYellow
-    }
-    else {
-        Write-Host '[5/5] Concluding month folder...' -ForegroundColor Yellow
-        $targetFolderName = Split-Path -Leaf $currentMonthPath
-        $step5Output = @(& $concludeScript -Path $StoragePath -PathType $PathType -TargetFolderName $targetFolderName)
-    }
-    if (Test-NonZeroExitCode -ExitCode $LASTEXITCODE) {
-        throw "Conclude-MonthFolder failed with exit code $LASTEXITCODE"
-    }
-}
-else {
-    Write-Host '[5/5] Skipped concluding month folder.' -ForegroundColor DarkYellow
+    Write-Host '[6/6] Skipped creating next month folder and template artifacts.' -ForegroundColor DarkYellow
 }
 
 Write-Host ''
