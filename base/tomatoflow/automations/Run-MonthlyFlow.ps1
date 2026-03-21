@@ -200,6 +200,7 @@ if (Confirm-StepExecution -Step 1 -Title 'Creating next month folder and templat
 }
 else {
     Write-Host '[1/5] Skipped creating next month folder and template artifacts.' -ForegroundColor DarkYellow
+    Write-Host "Selected Month folder is: $currentMonthPath" -ForegroundColor Gray
 }
 
 if (Confirm-StepExecution -Step 2 -Title 'Labeling files in current month folder.') {
