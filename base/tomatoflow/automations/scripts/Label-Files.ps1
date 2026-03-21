@@ -685,6 +685,8 @@ while ($true) {
     break
 }
 
+Write-Host "Applying changes..." -ForegroundColor Yellow
+
 # Map ops to existing items (validated already)
 $itemByBasename = @{}
 foreach ($it in $includedItems) { $itemByBasename[$it.Basename] = $it }
