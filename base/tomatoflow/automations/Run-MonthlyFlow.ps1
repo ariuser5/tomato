@@ -65,17 +65,21 @@ function Confirm-StepExecution {
         [Parameter(Mandatory = $true)][string]$Title
     )
 
-    $prompt = "[{0}/5] {1} Proceed with this step? [Yes/No] (default: Yes)" -f $Step, $Title
+    $prompt = "[{0}/5] {1} Proceed with this step? [Yes/No] (default: Yes, ESC = abort)" -f $Step, $Title
 
     while ($true) {
-        $answer = Read-Host $prompt
-        $choice = ([string]$answer ?? '').Trim().ToLowerInvariant()
+        $response = Read-InputWithEsc -Prompt $prompt
+        if ($response.Status -eq 'Escaped') {
+            return 'Abort'
+        }
+
+        $choice = ([string]$response.Value ?? '').Trim().ToLowerInvariant()
 
         if (-not $choice -or $choice -eq 'y' -or $choice -eq 'yes') {
-            return $true
+            return 'Run'
         }
         if ($choice -eq 'n' -or $choice -eq 'no') {
-            return $false
+            return 'Skip'
         }
 
         Write-Host "Please answer Yes or No." -ForegroundColor Yellow
@@ -168,6 +172,32 @@ $step4Executed = $false
 $step4Succeeded = $false
 $step5Output = @()
 
+function Exit-AbortedMonthlyFlow {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [int]$BeforeStep
+    )
+
+    Write-Host ''
+    Write-Host "Monthly tomatoflow aborted by user before step $BeforeStep (ESC)." -ForegroundColor DarkYellow
+    Write-Output (New-ToolResult -Status 'Aborted' -Data @{
+        FlowName = $resolvedFlowName
+        BasePath = $StoragePath
+        CurrentMonthPath = $currentMonthPath
+        CreatedMonthPath = $createdPath
+        CreateMonthlyReportResult = @($step1Output)
+        LabelResult = @($step2Output)
+        ArchiveResult = @($step3Output)
+        DraftRequested = $step4Requested
+        DraftExecuted = $step4Executed
+        DraftSucceeded = $step4Succeeded
+        ConcludeMonthFolderResult = @($step5Output)
+        AbortedBeforeStep = $BeforeStep
+    })
+    exit 0
+}
+
 $currentMonthPath = Get-LatestMonthTargetPath -RootPath $StoragePath -PathType $PathType
 if ($currentMonthPath) {
     Write-Host "Current month folder before step 1: $currentMonthPath" -ForegroundColor Gray
@@ -176,7 +206,11 @@ else {
     Write-Host 'Current month folder before step 1: (none found)' -ForegroundColor DarkYellow
 }
 
-if (Confirm-StepExecution -Step 1 -Title 'Creating next month folder and template artifacts.') {
+$step1Decision = Confirm-StepExecution -Step 1 -Title 'Creating next month folder and template artifacts.'
+if ($step1Decision -eq 'Abort') {
+    Exit-AbortedMonthlyFlow -BeforeStep 1
+}
+if ($step1Decision -eq 'Run') {
     Write-Host '[1/5] Creating next month folder and template artifacts...' -ForegroundColor Yellow
     $step1Output = @(& $createMonthlyReportScript -Path $StoragePath -PathType $PathType -StartYear $StartYear -NewFolderPrefix $NewFolderPrefix)
     if (Test-NonZeroExitCode -ExitCode $LASTEXITCODE) {
@@ -203,7 +237,11 @@ else {
     Write-Host "Selected Month folder is: $currentMonthPath" -ForegroundColor Gray
 }
 
-if (Confirm-StepExecution -Step 2 -Title 'Labeling files in current month folder.') {
+$step2Decision = Confirm-StepExecution -Step 2 -Title 'Labeling files in current month folder.'
+if ($step2Decision -eq 'Abort') {
+    Exit-AbortedMonthlyFlow -BeforeStep 2
+}
+if ($step2Decision -eq 'Run') {
     if (-not $currentMonthPath) {
         Write-Host '[2/5] Skipped labeling: no current month folder could be resolved.' -ForegroundColor DarkYellow
     }
@@ -227,7 +265,11 @@ else {
     Write-Host '[2/5] Skipped labeling files.' -ForegroundColor DarkYellow
 }
 
-if (Confirm-StepExecution -Step 3 -Title 'Archiving files by label.') {
+$step3Decision = Confirm-StepExecution -Step 3 -Title 'Archiving files by label.'
+if ($step3Decision -eq 'Abort') {
+    Exit-AbortedMonthlyFlow -BeforeStep 3
+}
+if ($step3Decision -eq 'Run') {
     if (-not $currentMonthPath) {
         Write-Host '[3/5] Skipped archiving: no current month folder could be resolved.' -ForegroundColor DarkYellow
     }
@@ -243,7 +285,11 @@ else {
     Write-Host '[3/5] Skipped archiving files by label.' -ForegroundColor DarkYellow
 }
 
-if (Confirm-StepExecution -Step 4 -Title 'Creating draft email automation.') {
+$step4Decision = Confirm-StepExecution -Step 4 -Title 'Creating draft email automation.'
+if ($step4Decision -eq 'Abort') {
+    Exit-AbortedMonthlyFlow -BeforeStep 4
+}
+if ($step4Decision -eq 'Run') {
     $step4Requested = $true
     if (Test-Path -LiteralPath $draftScript -PathType Leaf) {
         if (-not $resolvedMailerParamFile) {
@@ -279,7 +325,11 @@ else {
     Write-Host '[4/5] Skipped draft email automation.' -ForegroundColor DarkYellow
 }
 
-if (Confirm-StepExecution -Step 5 -Title 'Concluding month folder.') {
+$step5Decision = Confirm-StepExecution -Step 5 -Title 'Concluding month folder.'
+if ($step5Decision -eq 'Abort') {
+    Exit-AbortedMonthlyFlow -BeforeStep 5
+}
+if ($step5Decision -eq 'Run') {
     if (-not $currentMonthPath) {
         Write-Host '[5/5] Skipped concluding month folder: no current month folder could be resolved.' -ForegroundColor DarkYellow
     }
