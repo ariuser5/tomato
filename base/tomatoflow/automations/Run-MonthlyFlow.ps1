@@ -34,6 +34,9 @@ param(
     [string]$MailerParamFile,
 
     [Parameter()]
+    [string]$ArtifactsSourcePath,
+
+    [Parameter()]
     [string]$FlowName
 )
 
@@ -561,7 +564,17 @@ while ($true) {
 
     try {
         Write-Host '[6/6] Creating next month folder and template artifacts...' -ForegroundColor Yellow
-        $step1Output = @(& $createMonthlyReportScript -Path $StoragePath -PathType $PathType -StartYear $StartYear -NewFolderPrefix $NewFolderPrefix)
+        $createArgs = @{
+            Path = $StoragePath
+            PathType = $PathType
+            StartYear = $StartYear
+            NewFolderPrefix = $NewFolderPrefix
+        }
+        if (([string]$ArtifactsSourcePath ?? '').Trim()) {
+            $createArgs.ArtifactsSourcePath = $ArtifactsSourcePath
+        }
+
+        $step1Output = @(& $createMonthlyReportScript @createArgs)
         if (Test-NonZeroExitCode -ExitCode $LASTEXITCODE) {
             throw "Create-MonthlyReport failed with exit code $LASTEXITCODE"
         }

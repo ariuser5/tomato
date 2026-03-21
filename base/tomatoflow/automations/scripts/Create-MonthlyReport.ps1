@@ -5,18 +5,19 @@ Create-MonthlyReport.ps1
 Orchestrates the creation of a new monthly report folder on Google Drive and copies template files into it.
 
 Usage:
-    .\Create-MonthlyReport.ps1 -Path "gdrive:path/to/dir" [-PathType Auto|Local|Remote] [-StartYear 2025] [-NewFolderPrefix "_"]
+    .\Create-MonthlyReport.ps1 -Path "gdrive:path/to/dir" [-PathType Auto|Local|Remote] [-StartYear 2025] [-NewFolderPrefix "_"] [-ArtifactsSourcePath "C:\template\dir"]
 
 Parameters:
     -Path              Base folder where month folders live (local path or rclone remote spec)
     -PathType          Auto|Local|Remote (default: Auto)
     -StartYear         Year to start searching for missing months (default: current year)
     -NewFolderPrefix   Prefix for new folders (default: "_")
+    -ArtifactsSourcePath Optional source folder to copy artifacts from (local or remote). If omitted, copy step is skipped.
 
 Behavior:
     - Calls Ensure-NewMonthFolder.ps1 to create the next missing month folder (with prefix)
-    - If a folder is created, calls Copy-ToMonthFolder.ps1 to copy template files into it
-    - Template files are sourced from resources/monthly_report_template/
+    - If a folder is created and -ArtifactsSourcePath is set, calls Copy-ToMonthFolder.ps1 to copy artifacts into it
+    - If -ArtifactsSourcePath is not set, month folder is created without copying artifacts
     - Prints progress and summary output
 -------------------------------------------------------------------------------
 #>
@@ -33,7 +34,10 @@ param(
     [int]$StartYear = (Get-Date).Year,
 
     # Prefix to use when creating a fresh folder (default: underscore)
-    [string]$NewFolderPrefix = "_"
+    [string]$NewFolderPrefix = "_",
+
+    # Optional source folder to copy artifacts from.
+    [string]$ArtifactsSourcePath = ''
 )
 
 $ErrorActionPreference = "Stop"
@@ -42,8 +46,6 @@ $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ensureScriptPath = Join-Path $scriptDir ".\Ensure-NewMonthFolder.ps1"
 $copyScriptPath = Join-Path $scriptDir ".\Copy-ToMonthFolder.ps1"
-$baseDir = Split-Path (Split-Path (Split-Path $scriptDir -Parent) -Parent) -Parent
-$templateFolder = Join-Path $baseDir "resources\monthly_report_template"
 
 $pathModule = Join-Path $scriptDir "..\..\..\utils\PathUtils.psm1"
 Import-Module $pathModule -Force
@@ -64,10 +66,7 @@ if (-not (Test-Path $copyScriptPath)) {
     exit 1
 }
 
-if (-not (Test-Path $templateFolder -PathType Container)) {
-    Write-Error "Template folder not found at: $templateFolder"
-    exit 1
-}
+$resolvedArtifactsSourcePath = ([string]$ArtifactsSourcePath ?? '').Trim()
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Creating New Monthly Report" -ForegroundColor Cyan
@@ -120,20 +119,26 @@ if ($exitCode -ne 0 -or $null -eq $createdPath) {
 Write-Host "      ✓ Folder created: $createdPath" -ForegroundColor Green
 Write-Host ""
 
-# Step 2: Copy template files to the new folder
-Write-Host "[2/2] Copying template files to new folder..." -ForegroundColor Yellow
-try {
-    $null = & $copyScriptPath `
-        -SourcePath $templateFolder `
-        -DestinationPath $createdPath
-    
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "Copy-ToMonthFolder.ps1 failed with exit code $LASTEXITCODE"
+# Step 2: Optionally copy artifacts to the new folder
+if ($resolvedArtifactsSourcePath) {
+    Write-Host "[2/2] Copying artifacts to new folder..." -ForegroundColor Yellow
+    try {
+        $null = & $copyScriptPath `
+            -SourcePath $resolvedArtifactsSourcePath `
+            -DestinationPath $createdPath
+
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Copy-ToMonthFolder.ps1 failed with exit code $LASTEXITCODE"
+            exit 2
+        }
+    }
+    catch {
+        Write-Error "Failed to run Copy-ToMonthFolder.ps1: $_"
         exit 2
     }
-} catch {
-    Write-Error "Failed to run Copy-ToMonthFolder.ps1: $_"
-    exit 2
+}
+else {
+    Write-Host "[2/2] Skipped artifact copy: -ArtifactsSourcePath not provided." -ForegroundColor DarkYellow
 }
 
 Write-Host ""
@@ -145,6 +150,8 @@ Write-Host ""
 
 Write-Output (New-ToolResult -Status 'Initialized' -Data @{
         Path = $createdPath
+    ArtifactsCopied = [bool]$resolvedArtifactsSourcePath
+    ArtifactsSourcePath = $resolvedArtifactsSourcePath
     })
 
 exit 0

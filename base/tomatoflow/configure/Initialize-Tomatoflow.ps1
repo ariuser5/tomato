@@ -16,6 +16,9 @@ param(
     [string]$StoragePath,
 
     [Parameter()]
+    [string]$ArtifactsSourcePath,
+
+    [Parameter()]
     [ValidateSet('Auto', 'Local', 'Remote')]
     [string]$PathType = 'Auto'
 )
@@ -75,7 +78,8 @@ function New-FlowAutomations {
     param(
         [Parameter(Mandatory = $true)][string]$Name,
         [Parameter(Mandatory = $true)][string]$Path,
-        [Parameter(Mandatory = $true)][string]$Type
+        [Parameter(Mandatory = $true)][string]$Type,
+        [Parameter()][string]$ArtifactsPath
     )
 
     # Flow folders are top-level peers of "tomatoflow-setup" in the automation menu.
@@ -84,13 +88,17 @@ function New-FlowAutomations {
     $automationsCwd = '$env:TOMATO_ROOT/base/tomatoflow/automations'
     $defaultMailerParamFile = '$TOMATO_ROOT/base/resources/mailer-sample.json'
     $defaultLabelArchiveMapFile = '$TOMATO_ROOT/base/resources/archive-label-map.json'
+    $runMonthlyArgs = @('-FlowName', $Name, '-StoragePath', $Path, '-PathType', $Type, '-MailerParamFile', $defaultMailerParamFile)
+    if (([string]$ArtifactsPath ?? '').Trim()) {
+        $runMonthlyArgs += @('-ArtifactsSourcePath', $ArtifactsPath)
+    }
 
     return @(
         [pscustomobject]@{
             alias = 'Run Monthly Flow'
             categoryPath = $flowCategory
             command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Run-MonthlyFlow.ps1"'
-            args = @('-FlowName', $Name, '-StoragePath', $Path, '-PathType', $Type, '-MailerParamFile', $defaultMailerParamFile)
+            args = $runMonthlyArgs
             cwd = $automationsCwd
         },
         [pscustomobject]@{
@@ -187,6 +195,13 @@ if (-not $resolvedStoragePath) {
     throw 'Storage path is required.'
 }
 
+$resolvedArtifactsSourcePath = ([string]$ArtifactsSourcePath ?? '').Trim()
+if (-not $resolvedArtifactsSourcePath -and $Host.UI -and $Host.UI.RawUI) {
+    Write-Host "Please provide an optional source path for template artifacts to copy into the new month folder." -ForegroundColor Cyan
+    Write-Host "This can be useful for pre-populating the folder with standard files or templates." -ForegroundColor Cyan
+    $resolvedArtifactsSourcePath = (Read-Host 'Artifacts source path (optional, leave empty to skip copy)').Trim()
+}
+
 $metadataFilePath = Get-MetadataFilePath
 $metadataConfig = Read-MetadataConfig -Path $metadataFilePath
 $existingAutomations = @($metadataConfig.automations)
@@ -209,7 +224,7 @@ foreach ($entry in $existingAutomations) {
     $filtered += $entry
 }
 
-$newFlowAutomations = New-FlowAutomations -Name $resolvedFlowName -Path $resolvedStoragePath -Type $PathType
+$newFlowAutomations = New-FlowAutomations -Name $resolvedFlowName -Path $resolvedStoragePath -Type $PathType -ArtifactsPath $resolvedArtifactsSourcePath
 $merged = @($filtered + $newFlowAutomations)
 
 $payload = [ordered]@{
@@ -226,6 +241,7 @@ Write-Host 'Restart Start-Main.ps1 menu (or re-open Automations) to see new entr
 Write-Output (New-ToolResult -Status 'Configured' -Data @{
         FlowName = $resolvedFlowName
         StoragePath = $resolvedStoragePath
+    ArtifactsSourcePath = $resolvedArtifactsSourcePath
         PathType = $PathType
         MetadataPath = $metadataFilePath
         AddedAutomations = @($newFlowAutomations | ForEach-Object { $_.alias })
