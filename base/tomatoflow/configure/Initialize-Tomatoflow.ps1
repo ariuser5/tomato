@@ -19,6 +19,15 @@ param(
     [string]$ArtifactsSourcePath,
 
     [Parameter()]
+    [string]$MailerParamFile,
+
+    [Parameter()]
+    [string]$LabelsFilePath,
+
+    [Parameter()]
+    [string]$LabelArchiveMapFile,
+
+    [Parameter()]
     [ValidateSet('Auto', 'Local', 'Remote')]
     [string]$PathType = 'Auto'
 )
@@ -30,6 +39,10 @@ Import-Module $resultUtilsModule -Force
 
 $flowConfigUtilsModule = Join-Path $PSScriptRoot '.\modules\FlowConfigUtils.psm1'
 Import-Module $flowConfigUtilsModule -Force
+
+$defaultMailerParamFile = '$TOMATO_ROOT/base/resources/mailer-sample.json'
+$defaultLabelsFilePath = '$TOMATO_ROOT/base/resources/gdrive-labels.txt'
+$defaultLabelArchiveMapFile = '$TOMATO_ROOT/base/resources/archive-label-map.json'
 
 function Get-MetadataFilePath {
     [CmdletBinding()]
@@ -79,16 +92,24 @@ function New-FlowAutomations {
         [Parameter(Mandatory = $true)][string]$Name,
         [Parameter(Mandatory = $true)][string]$Path,
         [Parameter(Mandatory = $true)][string]$Type,
-        [Parameter()][string]$ArtifactsPath
+        [Parameter()][string]$ArtifactsPath,
+        [Parameter(Mandatory = $true)][string]$MailerFilePath,
+        [Parameter(Mandatory = $true)][string]$LabelsPath,
+        [Parameter(Mandatory = $true)][string]$ArchiveMapFilePath
     )
 
     # Flow folders are top-level peers of "tomatoflow-setup" in the automation menu.
     $flowCategory = @($Name)
 
     $automationsCwd = '$env:TOMATO_ROOT/base/tomatoflow/automations'
-    $defaultMailerParamFile = '$TOMATO_ROOT/base/resources/mailer-sample.json'
-    $defaultLabelArchiveMapFile = '$TOMATO_ROOT/base/resources/archive-label-map.json'
-    $runMonthlyArgs = @('-FlowName', $Name, '-StoragePath', $Path, '-PathType', $Type, '-MailerParamFile', $defaultMailerParamFile)
+    $runMonthlyArgs = @(
+        '-FlowName', $Name,
+        '-StoragePath', $Path,
+        '-PathType', $Type,
+        '-MailerParamFile', $MailerFilePath,
+        '-LabelsFilePath', $LabelsPath,
+        '-LabelArchiveMapFile', $ArchiveMapFilePath
+    )
     if (([string]$ArtifactsPath ?? '').Trim()) {
         $runMonthlyArgs += @('-ArtifactsSourcePath', $ArtifactsPath)
     }
@@ -133,7 +154,8 @@ function New-FlowAutomations {
                 '-ScriptPath', 'Label-Files.ps1',
                 '-PStoragePath', $Path,
                 '-PPathType', $Type,
-                '-PPath', '$Prompt'
+                '-PPath', '$Prompt',
+                '-PLabelsFilePath', $LabelsPath
             )
             cwd = $automationsCwd
         },
@@ -146,7 +168,7 @@ function New-FlowAutomations {
                 '-PStoragePath', $Path,
                 '-PPathType', $Type,
                 '-PPath', '$Prompt',
-                '-PLabelArchiveMapFile', $defaultLabelArchiveMapFile
+                '-PLabelArchiveMapFile', $ArchiveMapFilePath
             )
             cwd = $automationsCwd
         },
@@ -159,7 +181,7 @@ function New-FlowAutomations {
                 '-PStoragePath', $Path,
                 '-PPathType', $Type,
                 '-PPath', '$Prompt',
-                '-PMailerParamFile', $defaultMailerParamFile,
+                '-PMailerParamFile', $MailerFilePath,
                 '-PDefaultAttachmentPatterns', '[Aa]rchives/'
             )
             cwd = $automationsCwd
@@ -177,6 +199,95 @@ function New-FlowAutomations {
             cwd = $automationsCwd
         }
     )
+}
+
+function Resolve-ConfiguredFilePath {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RawPath
+    )
+
+    $value = ([string]$RawPath ?? '').Trim()
+    if (-not $value) {
+        return ''
+    }
+
+    $tomatoRoot = ([string]$env:TOMATO_ROOT ?? '').Trim()
+    $expanded = $value
+    if ($tomatoRoot) {
+        if ($expanded -like '$env:TOMATO_ROOT/*' -or $expanded -like '$env:TOMATO_ROOT\\*') {
+            $suffix = $expanded.Substring('$env:TOMATO_ROOT'.Length).TrimStart('/', [char]'\')
+            $expanded = Join-Path $tomatoRoot $suffix
+        }
+        elseif ($expanded -like '$TOMATO_ROOT/*' -or $expanded -like '$TOMATO_ROOT\\*') {
+            $suffix = $expanded.Substring('$TOMATO_ROOT'.Length).TrimStart('/', [char]'\')
+            $expanded = Join-Path $tomatoRoot $suffix
+        }
+        elseif ($expanded -like '%TOMATO_ROOT%/*' -or $expanded -like '%TOMATO_ROOT%\\*') {
+            $suffix = $expanded.Substring('%TOMATO_ROOT%'.Length).TrimStart('/', [char]'\')
+            $expanded = Join-Path $tomatoRoot $suffix
+        }
+    }
+
+    if (-not [System.IO.Path]::IsPathRooted($expanded)) {
+        $baseDir = if ($tomatoRoot) { $tomatoRoot } else { (Get-Location).Path }
+        $expanded = Join-Path $baseDir $expanded
+    }
+
+    return [System.IO.Path]::GetFullPath($expanded)
+}
+
+function Resolve-ConfigFileInput {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$PromptLabel,
+
+        [Parameter(Mandatory = $true)]
+        [string]$DefaultPath,
+
+        [Parameter()]
+        [string]$InitialValue,
+
+        [Parameter()]
+        [bool]$HasInitialValue = $false
+    )
+
+    $candidate = ([string]$InitialValue ?? '').Trim()
+
+    while ($true) {
+        if ($Host.UI -and $Host.UI.RawUI -and (-not $HasInitialValue)) {
+            $entered = (Read-Host ("{0} (Enter = default: {1})" -f $PromptLabel, $DefaultPath)).Trim()
+            if (-not $entered) {
+                return $DefaultPath
+            }
+
+            $candidate = $entered
+        }
+        elseif (-not $candidate) {
+            return $DefaultPath
+        }
+
+        $resolvedCandidate = Resolve-ConfiguredFilePath -RawPath $candidate
+        if (Test-Path -LiteralPath $resolvedCandidate -PathType Leaf) {
+            return $candidate
+        }
+
+        Write-Host "Configured file not found: $resolvedCandidate" -ForegroundColor Red
+
+        if (-not ($Host.UI -and $Host.UI.RawUI)) {
+            throw "Configured file does not exist for '$PromptLabel': $resolvedCandidate"
+        }
+
+        $retryChoice = (Read-Host "Retry '$PromptLabel' configuration? [Yes/No] (default: Yes)").Trim().ToLowerInvariant()
+        if ($retryChoice -eq 'n' -or $retryChoice -eq 'no') {
+            throw "Configuration aborted: invalid file path for '$PromptLabel'."
+        }
+
+        $HasInitialValue = $false
+        $candidate = ''
+    }
 }
 
 $resolvedFlowName = ([string]$FlowName ?? '').Trim()
@@ -202,6 +313,10 @@ if (-not $resolvedArtifactsSourcePath -and $Host.UI -and $Host.UI.RawUI) {
     $resolvedArtifactsSourcePath = (Read-Host 'Artifacts source path (optional, leave empty to skip copy)').Trim()
 }
 
+$resolvedMailerParamFile = Resolve-ConfigFileInput -PromptLabel 'Mailer param file' -DefaultPath $defaultMailerParamFile -InitialValue $MailerParamFile -HasInitialValue $PSBoundParameters.ContainsKey('MailerParamFile')
+$resolvedLabelsFilePath = Resolve-ConfigFileInput -PromptLabel 'Labels input file' -DefaultPath $defaultLabelsFilePath -InitialValue $LabelsFilePath -HasInitialValue $PSBoundParameters.ContainsKey('LabelsFilePath')
+$resolvedLabelArchiveMapFile = Resolve-ConfigFileInput -PromptLabel 'Label-to-archive map file' -DefaultPath $defaultLabelArchiveMapFile -InitialValue $LabelArchiveMapFile -HasInitialValue $PSBoundParameters.ContainsKey('LabelArchiveMapFile')
+
 $metadataFilePath = Get-MetadataFilePath
 $metadataConfig = Read-MetadataConfig -Path $metadataFilePath
 $existingAutomations = @($metadataConfig.automations)
@@ -224,7 +339,7 @@ foreach ($entry in $existingAutomations) {
     $filtered += $entry
 }
 
-$newFlowAutomations = New-FlowAutomations -Name $resolvedFlowName -Path $resolvedStoragePath -Type $PathType -ArtifactsPath $resolvedArtifactsSourcePath
+$newFlowAutomations = New-FlowAutomations -Name $resolvedFlowName -Path $resolvedStoragePath -Type $PathType -ArtifactsPath $resolvedArtifactsSourcePath -MailerFilePath $resolvedMailerParamFile -LabelsPath $resolvedLabelsFilePath -ArchiveMapFilePath $resolvedLabelArchiveMapFile
 $merged = @($filtered + $newFlowAutomations)
 
 $payload = [ordered]@{
@@ -242,6 +357,9 @@ Write-Output (New-ToolResult -Status 'Configured' -Data @{
         FlowName = $resolvedFlowName
         StoragePath = $resolvedStoragePath
     ArtifactsSourcePath = $resolvedArtifactsSourcePath
+    MailerParamFile = $resolvedMailerParamFile
+    LabelsFilePath = $resolvedLabelsFilePath
+    LabelArchiveMapFile = $resolvedLabelArchiveMapFile
         PathType = $PathType
         MetadataPath = $metadataFilePath
         AddedAutomations = @($newFlowAutomations | ForEach-Object { $_.alias })

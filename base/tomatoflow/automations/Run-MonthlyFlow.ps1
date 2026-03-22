@@ -31,6 +31,9 @@ param(
     [string]$LabelsFilePath,
 
     [Parameter()]
+    [string]$LabelArchiveMapFile,
+
+    [Parameter()]
     [string]$MailerParamFile,
 
     [Parameter()]
@@ -424,7 +427,15 @@ while ($true) {
         }
         else {
             Write-Host '[3/6] Archiving files by label...' -ForegroundColor Yellow
-            $step3Output = @(& $archiveScript -Path $currentMonthPath -PathType $PathType)
+            $archiveArgs = @{
+                Path = $currentMonthPath
+                PathType = $PathType
+            }
+            if (([string]$LabelArchiveMapFile ?? '').Trim()) {
+                $archiveArgs.LabelArchiveMapFile = $LabelArchiveMapFile
+            }
+
+            $step3Output = @(& $archiveScript @archiveArgs)
             if (Test-NonZeroExitCode -ExitCode $LASTEXITCODE) {
                 throw "Archive-ByLabel failed with exit code $LASTEXITCODE"
             }
