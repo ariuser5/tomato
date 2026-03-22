@@ -66,6 +66,9 @@ Import-Module $commandUtilsModule -Force
 $resultUtilsModule = Join-Path $scriptDir '..\..\utils\common\ResultUtils.psm1'
 Import-Module $resultUtilsModule -Force
 
+$envPathUtilsModule = Join-Path $scriptDir '..\..\utils\common\EnvPathUtils.psm1'
+Import-Module $envPathUtilsModule -Force
+
 foreach ($required in @($createMonthlyReportScript, $concludeScript, $labelScript, $archiveScript)) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
         throw "Missing required script: $required"
@@ -141,29 +144,7 @@ function Resolve-MailerParamFilePath {
         return ''
     }
 
-    $tomatoRoot = ([string]$env:TOMATO_ROOT ?? '').Trim()
-    $expanded = $raw
-    if ($tomatoRoot) {
-        if ($expanded -like '$env:TOMATO_ROOT/*' -or $expanded -like '$env:TOMATO_ROOT\\*') {
-            $suffix = $expanded.Substring('$env:TOMATO_ROOT'.Length).TrimStart('/', [char]'\')
-            $expanded = Join-Path $tomatoRoot $suffix
-        }
-        elseif ($expanded -like '$TOMATO_ROOT/*' -or $expanded -like '$TOMATO_ROOT\\*') {
-            $suffix = $expanded.Substring('$TOMATO_ROOT'.Length).TrimStart('/', [char]'\')
-            $expanded = Join-Path $tomatoRoot $suffix
-        }
-        elseif ($expanded -like '%TOMATO_ROOT%/*' -or $expanded -like '%TOMATO_ROOT%\\*') {
-            $suffix = $expanded.Substring('%TOMATO_ROOT%'.Length).TrimStart('/', [char]'\')
-            $expanded = Join-Path $tomatoRoot $suffix
-        }
-    }
-
-    if (-not [System.IO.Path]::IsPathRooted($expanded)) {
-        $baseDir = if ($tomatoRoot) { $tomatoRoot } else { (Get-Location).Path }
-        $expanded = Join-Path $baseDir $expanded
-    }
-
-    return [System.IO.Path]::GetFullPath($expanded)
+    return (Resolve-TomatoRootPath -InputPath $raw -ResolveRelative)
 }
 
 function Confirm-YesNoOrAbort {

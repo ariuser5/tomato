@@ -35,6 +35,9 @@ Import-Module $flowTargetUtilsModule -Force
 $resultUtilsModule = Join-Path $PSScriptRoot '..\..\utils\common\ResultUtils.psm1'
 Import-Module $resultUtilsModule -Force
 
+$envPathUtilsModule = Join-Path $PSScriptRoot '..\..\utils\common\EnvPathUtils.psm1'
+Import-Module $envPathUtilsModule -Force
+
 function Resolve-GenericScriptPath {
     [CmdletBinding()]
     param(
@@ -299,6 +302,36 @@ function Remove-HelperOnlyArgs {
     }
 }
 
+function Resolve-InvokeStringArguments {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$InvokeArgs
+    )
+
+    foreach ($key in @($InvokeArgs.Keys)) {
+        $current = $InvokeArgs[$key]
+        if ($current -is [array]) {
+            $InvokeArgs[$key] = @(
+                $current |
+                    ForEach-Object {
+                        if ($_ -is [string]) {
+                            Resolve-TomatoRootPath -InputPath ([string]$_)
+                        }
+                        else {
+                            $_
+                        }
+                    }
+            )
+            continue
+        }
+
+        if ($current -is [string]) {
+            $InvokeArgs[$key] = Resolve-TomatoRootPath -InputPath ([string]$current)
+        }
+    }
+}
+
 $targetScript = Resolve-GenericScriptPath -RawPath $ScriptPath
 $invokeArgs = Parse-PassThroughArgs -RawArgs $PassThroughArgs
 
@@ -311,5 +344,6 @@ Resolve-PathPromptValue -InvokeArgs $invokeArgs -PromptMarker $promptMarker -Pro
 Resolve-TargetFolderNamePromptValue -InvokeArgs $invokeArgs -PromptMarker $promptMarker -PromptLabel $promptLabel -TargetScriptPath $targetScript
 
 Remove-HelperOnlyArgs -InvokeArgs $invokeArgs
+Resolve-InvokeStringArguments -InvokeArgs $invokeArgs
 
 & $targetScript @invokeArgs

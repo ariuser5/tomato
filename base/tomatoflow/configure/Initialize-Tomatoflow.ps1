@@ -40,6 +40,9 @@ Import-Module $resultUtilsModule -Force
 $flowConfigUtilsModule = Join-Path $PSScriptRoot '.\modules\FlowConfigUtils.psm1'
 Import-Module $flowConfigUtilsModule -Force
 
+$envPathUtilsModule = Join-Path $PSScriptRoot '..\..\utils\common\EnvPathUtils.psm1'
+Import-Module $envPathUtilsModule -Force
+
 $defaultMailerParamFile = '$TOMATO_ROOT/base/resources/mailer-sample.json'
 $defaultLabelsFilePath = '$TOMATO_ROOT/base/resources/gdrive-labels.txt'
 $defaultLabelArchiveMapFile = '$TOMATO_ROOT/base/resources/archive-label-map.json'
@@ -219,29 +222,7 @@ function Resolve-ConfiguredFilePath {
         return ''
     }
 
-    $tomatoRoot = ([string]$env:TOMATO_ROOT ?? '').Trim()
-    $expanded = $value
-    if ($tomatoRoot) {
-        if ($expanded -like '$env:TOMATO_ROOT/*' -or $expanded -like '$env:TOMATO_ROOT\\*') {
-            $suffix = $expanded.Substring('$env:TOMATO_ROOT'.Length).TrimStart('/', [char]'\')
-            $expanded = Join-Path $tomatoRoot $suffix
-        }
-        elseif ($expanded -like '$TOMATO_ROOT/*' -or $expanded -like '$TOMATO_ROOT\\*') {
-            $suffix = $expanded.Substring('$TOMATO_ROOT'.Length).TrimStart('/', [char]'\')
-            $expanded = Join-Path $tomatoRoot $suffix
-        }
-        elseif ($expanded -like '%TOMATO_ROOT%/*' -or $expanded -like '%TOMATO_ROOT%\\*') {
-            $suffix = $expanded.Substring('%TOMATO_ROOT%'.Length).TrimStart('/', [char]'\')
-            $expanded = Join-Path $tomatoRoot $suffix
-        }
-    }
-
-    if (-not [System.IO.Path]::IsPathRooted($expanded)) {
-        $baseDir = if ($tomatoRoot) { $tomatoRoot } else { (Get-Location).Path }
-        $expanded = Join-Path $baseDir $expanded
-    }
-
-    return [System.IO.Path]::GetFullPath($expanded)
+    return (Resolve-TomatoRootPath -InputPath $value -ResolveRelative)
 }
 
 function Resolve-ConfigFileInput {
