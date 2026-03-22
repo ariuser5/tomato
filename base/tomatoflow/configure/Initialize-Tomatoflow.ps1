@@ -114,6 +114,15 @@ function New-FlowAutomations {
         $runMonthlyArgs += @('-ArtifactsSourcePath', $ArtifactsPath)
     }
 
+    $createMonthlyReportArgs = @(
+        '-ScriptPath', 'Create-MonthlyReport.ps1',
+        '-PPath', $Path,
+        '-PPathType', $Type
+    )
+    if (([string]$ArtifactsPath ?? '').Trim()) {
+        $createMonthlyReportArgs += @('-PArtifactsSourcePath', $ArtifactsPath)
+    }
+
     return @(
         [pscustomobject]@{
             alias = 'Run Monthly Flow'
@@ -136,14 +145,10 @@ function New-FlowAutomations {
             cwd = $automationsCwd
         },
         [pscustomobject]@{
-            alias = 'Ensure New Month Folder'
+            alias = 'Create Monthly Report'
             categoryPath = $flowCategory
             command = '& "$env:TOMATO_ROOT/base/tomatoflow/automations/Run-SingleScript.ps1"'
-            args = @(
-                '-ScriptPath', 'Ensure-NewMonthFolder.ps1',
-                '-PPath', $Path,
-                '-PPathType', $Type
-            )
+            args = $createMonthlyReportArgs
             cwd = $automationsCwd
         },
         [pscustomobject]@{

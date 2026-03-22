@@ -28,7 +28,7 @@ function Get-ManagedFlowAliases {
     return @(
         'Run Monthly Flow',
         'Preview Storage',
-        'Ensure New Month Folder',
+        'Create Monthly Report',
         'Label Files',
         'Archive By Label',
         'Create Draft Email',
