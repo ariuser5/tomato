@@ -117,7 +117,8 @@ function New-FlowAutomations {
     $createMonthlyReportArgs = @(
         '-ScriptPath', 'Create-MonthlyReport.ps1',
         '-PPath', $Path,
-        '-PPathType', $Type
+        '-PPathType', $Type,
+        '-PConfirmArtifactsCopy', 'true'
     )
     if (([string]$ArtifactsPath ?? '').Trim()) {
         $createMonthlyReportArgs += @('-PArtifactsSourcePath', $ArtifactsPath)

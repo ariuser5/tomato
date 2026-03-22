@@ -5,7 +5,7 @@ Create-MonthlyReport.ps1
 Orchestrates the creation of a new monthly report folder on Google Drive and copies template files into it.
 
 Usage:
-    .\Create-MonthlyReport.ps1 -Path "gdrive:path/to/dir" [-PathType Auto|Local|Remote] [-StartYear 2025] [-NewFolderPrefix "_"] [-ArtifactsSourcePath "C:\template\dir"]
+    .\Create-MonthlyReport.ps1 -Path "gdrive:path/to/dir" [-PathType Auto|Local|Remote] [-StartYear 2025] [-NewFolderPrefix "_"] [-ArtifactsSourcePath "C:\template\dir"] [-ConfirmArtifactsCopy]
 
 Parameters:
     -Path              Base folder where month folders live (local path or rclone remote spec)
@@ -13,11 +13,14 @@ Parameters:
     -StartYear         Year to start searching for missing months (default: current year)
     -NewFolderPrefix   Prefix for new folders (default: "_")
     -ArtifactsSourcePath Optional source folder to copy artifacts from (local or remote). If omitted, copy step is skipped.
+    -ConfirmArtifactsCopy Optional switch. When set, asks for confirmation before copying artifacts.
 
 Behavior:
     - Calls Ensure-NewMonthFolder.ps1 to create the next missing month folder (with prefix)
     - If a folder is created and -ArtifactsSourcePath is set, calls Copy-ToMonthFolder.ps1 to copy artifacts into it
+    - If -ConfirmArtifactsCopy is set, prompts before copy and skips when user answers No
     - If -ArtifactsSourcePath is not set, month folder is created without copying artifacts
+    - If -ConfirmArtifactsCopy is set but -ArtifactsSourcePath is empty, prints a warning
     - Prints progress and summary output
 -------------------------------------------------------------------------------
 #>
@@ -37,7 +40,10 @@ param(
     [string]$NewFolderPrefix = "_",
 
     # Optional source folder to copy artifacts from.
-    [string]$ArtifactsSourcePath = ''
+    [string]$ArtifactsSourcePath = '',
+
+    # Optional switch to ask confirmation before copying artifacts.
+    [switch]$ConfirmArtifactsCopy
 )
 
 $ErrorActionPreference = "Stop"
@@ -120,7 +126,20 @@ Write-Host "      ✓ Folder created: $createdPath" -ForegroundColor Green
 Write-Host ""
 
 # Step 2: Optionally copy artifacts to the new folder
-if ($resolvedArtifactsSourcePath) {
+$shouldCopyArtifacts = [bool]$resolvedArtifactsSourcePath
+if ($ConfirmArtifactsCopy -and -not $resolvedArtifactsSourcePath) {
+    Write-Warning "-ConfirmArtifactsCopy is set, but -ArtifactsSourcePath is empty. Skipping artifact copy."
+}
+
+if ($ConfirmArtifactsCopy -and $resolvedArtifactsSourcePath) {
+    $copyChoice = (Read-Host "[2/2] Copy artifacts from '$resolvedArtifactsSourcePath'? [Yes/No] (default: Yes)").Trim().ToLowerInvariant()
+    if ($copyChoice -eq 'n' -or $copyChoice -eq 'no') {
+        $shouldCopyArtifacts = $false
+        Write-Host "[2/2] Skipped artifact copy by user choice." -ForegroundColor DarkYellow
+    }
+}
+
+if ($shouldCopyArtifacts) {
     Write-Host "[2/2] Copying artifacts to new folder..." -ForegroundColor Yellow
     try {
         $null = & $copyScriptPath `
@@ -150,8 +169,9 @@ Write-Host ""
 
 Write-Output (New-ToolResult -Status 'Initialized' -Data @{
         Path = $createdPath
-    ArtifactsCopied = [bool]$resolvedArtifactsSourcePath
+    ArtifactsCopied = [bool]$shouldCopyArtifacts
     ArtifactsSourcePath = $resolvedArtifactsSourcePath
+    ConfirmArtifactsCopy = [bool]$ConfirmArtifactsCopy
     })
 
 exit 0

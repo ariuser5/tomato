@@ -580,6 +580,7 @@ while ($true) {
             PathType = $PathType
             StartYear = $StartYear
             NewFolderPrefix = $NewFolderPrefix
+            ConfirmArtifactsCopy = $true
         }
         if (([string]$ArtifactsSourcePath ?? '').Trim()) {
             $createArgs.ArtifactsSourcePath = $ArtifactsSourcePath
